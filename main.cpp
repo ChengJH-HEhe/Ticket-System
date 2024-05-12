@@ -497,7 +497,7 @@ public:
 
 namespace Bptree {
 
-#define Bustub_PAGE_SIZE 4096
+#define Bustub_PAGE_SIZE 18384
 #define INTERNAL_PAGE_HEADER_SIZE 20
 #define LEAF_PAGE_HEADER_SIZE 24
 
@@ -789,7 +789,7 @@ class BPlusTree {
   };
   struct Ptr;
   struct BufferPoolManager {
-#define MaxSize 400
+#define MaxSize 100033
     DiskManager disk;
     size_t sz = 0;
     int pos[MaxSize], *rt;
