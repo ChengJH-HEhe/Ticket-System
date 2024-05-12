@@ -1,0 +1,6 @@
+{
+  "cmake.sourceDirectory": "/home/unix/github/Bpt",
+  "clangd.fallbackFlags": [
+    "-std=c++20"
+  ]
+}

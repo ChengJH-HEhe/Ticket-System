@@ -1,0 +1,31 @@
+30
+find nf
+find dt
+insert sp 323726717
+find ka
+insert se 518431500
+find gq
+delete se 518431500
+insert bo 322707323
+find ba
+find cq
+insert it 977782984
+insert if 857158143
+find jx
+find qp
+find ze
+find tv
+insert cl 143018888
+delete if 857158143
+insert cb 737469206
+find eg
+find ib
+insert dq 14218170
+find bd
+delete bo 322707323
+insert kn 743256889
+insert xb 702893285
+insert vb 511107308
+delete cb 737469206
+delete cl 143018888
+delete sp 323726717
