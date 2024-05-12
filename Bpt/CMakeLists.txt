@@ -4,7 +4,7 @@ project(Bplustree VERSION 0.1.0 LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 20)
 include(CTest)
 enable_testing()
-add_executable(Bplustree main.cpp)
+add_executable(code main.cpp)
 # target_compile_options(Bplustree PUBLIC -fsanitize=address,undefined)
 # add -fsanitize=address, undefined to the compile option
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address,undefined")
