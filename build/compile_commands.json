@@ -1,0 +1,7 @@
+[
+{
+  "directory": "/home/unix/github/Ticket-System/build",
+  "command": "/usr/bin/clang++    -O3  -Wall -g -std=gnu++20 -o CMakeFiles/code.dir/main.cpp.o -c /home/unix/github/Ticket-System/Bpt/main.cpp",
+  "file": "/home/unix/github/Ticket-System/Bpt/main.cpp"
+}
+]
