@@ -501,7 +501,7 @@ public:
 
 namespace Bptree {
 
-#define Bustub_PAGE_SIZE 16384
+#define Bustub_PAGE_SIZE 32768
 #define INTERNAL_PAGE_HEADER_SIZE 20
 #define LEAF_PAGE_HEADER_SIZE 24
 
@@ -577,7 +577,6 @@ public:
     db_io_.write(page_data, def_size);
   }
   void ReadType(page_id_t page_id, char *type_data, int def_size = 4) {
-    assert(page_id != 0);
     db_io_.seekg((page_id - 1) * Bustub_PAGE_SIZE);
     db_io_.read(type_data, sizeof(IndexPageType));
   }
@@ -795,15 +794,13 @@ class BPlusTree {
   };
   struct Ptr;
   struct BufferPoolManager {
-#define MaxSize 1000
+#define MaxSize 114514
     DiskManager disk;
     size_t sz = 0;
     int pos[MaxSize], *rt;
     Ptr tmp[MaxSize];
     std::fstream root;
-
     void init(std::string file_name, int *header_id) {
-      memset(pos, 0, sizeof(pos));
       this->disk.init(file_name);
       rt = header_id;
       root.open("root", std::ios::binary | std::ios::in | std::ios::out);
@@ -823,15 +820,13 @@ class BPlusTree {
 
       IndexPageType ind = content->IsLeafPage() ? IndexPageType::LEAF_PAGE
                                                 : IndexPageType::INTERNAL_PAGE;
-      assert(head->pin == 1);
       if (ind == IndexPageType::LEAF_PAGE)
-        disk.WritePage(head->pos, reinterpret_cast<const char *>(content),
-                       reinterpret_cast<const char *>(&ind),
-                       sizeof(BPlusTreeLeafPage));
+        sz = sizeof(BPlusTreeLeafPage);
       else
-        disk.WritePage(head->pos, reinterpret_cast<const char *>(content),
+        sz = sizeof(BPlusTreeInternalPage);
+      disk.WritePage(head->pos, reinterpret_cast<const char *>(content),
                        reinterpret_cast<const char *>(&ind),
-                       sizeof(BPlusTreeInternalPage));
+                       sz);
       head->pin = 0;
     }
     void ReadPage(page_id_t id, BPlusTreePage *&content) {
@@ -946,7 +941,6 @@ class BPlusTree {
         bpm = bpm_;
         content = cont;
         bpm->get_content(pos_, this);
-        assert(content != nullptr);
       }
     }
     Ptr(const Ptr &rhs) {
@@ -955,7 +949,6 @@ class BPlusTree {
       bpm = rhs.bpm;
       ++head->count;
     }
-    void WritePage() { bpm->WritePage(head, content); }
     void delPtr() {
       if (head)
         --head->count;
@@ -1436,7 +1429,7 @@ int main(int, char **) {
         std::cout << "null\n";
       else
         std::cout << "\n"; // assert(result.size() + (i-1000)/2 == 1000);
-
+      result.clear();
     } else {
       std::cin >> com.s >> val;
       gethsh(com, hsh);
