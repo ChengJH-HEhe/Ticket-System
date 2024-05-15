@@ -4,6 +4,8 @@
 #include <memory>
 #include <string.h>
 
+#include <cmath>
+
 namespace sjtu {
 template <typename T> class vector {
   size_t m_size, m_cap;
@@ -497,7 +499,7 @@ public:
 
 namespace Bptree {
 
-#define Bustub_PAGE_SIZE 9192
+#define Bustub_PAGE_SIZE 16384
 #define INTERNAL_PAGE_HEADER_SIZE 20
 #define LEAF_PAGE_HEADER_SIZE 24
 
@@ -664,8 +666,9 @@ class BPlusTree {
     */
     pair<size_t, page_id_t> find(const KeyType &key) {
       size_t pos = 0, sz = GetSize();
-      while (pos + 1 < sz && !(key < KeyAt(pos + 1)))
-        ++pos;
+      for(int length = (1 << int(log2(sz))); length; length >>= 1)
+        if (pos + length < sz && !(key < KeyAt(pos + length)))
+          pos += length;
       return {pos, array_[pos].second};
     }
     /*  array_[index] = pair{key, val}
@@ -734,8 +737,9 @@ class BPlusTree {
     auto ValAt(int index) const -> ValueType { return array_[index].second; }
     size_t find(const KeyType &key, const ValueType &value) {
       size_t pos = 0, sz = GetSize();
-      while (pos + 1 < sz && !(key < KeyAt(pos + 1)))
-        ++pos;
+      for(int length = (1 << int(log2(sz))); length; length >>= 1)
+        if (pos + length < sz && !(key < KeyAt(pos + length)))
+          pos += length;
       if (KeyAt(pos) < key)
         return (pos + 1) << 1;
       return (pos << 1) + (array_[pos].first == key);
