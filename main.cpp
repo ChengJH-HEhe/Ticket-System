@@ -497,6 +497,8 @@ public:
 
 // implement a b-plus-tree
 
+
+
 namespace Bptree {
 
 #define Bustub_PAGE_SIZE 16384
@@ -793,7 +795,7 @@ class BPlusTree {
   };
   struct Ptr;
   struct BufferPoolManager {
-#define MaxSize 100033
+#define MaxSize 1000
     DiskManager disk;
     size_t sz = 0;
     int pos[MaxSize], *rt;
@@ -834,8 +836,8 @@ class BPlusTree {
     }
     void ReadPage(page_id_t id, BPlusTreePage *&content) {
       IndexPageType type;
-      size_t sz;
       disk.ReadType(id, reinterpret_cast<char *>(&type));
+      size_t sz;
       if (type == IndexPageType::LEAF_PAGE)
         content = new BPlusTreeLeafPage, sz = sizeof(BPlusTreeLeafPage);
       else
@@ -852,12 +854,12 @@ class BPlusTree {
     }
     // 区分在末尾析构，还是中途析构
     void del_content(int pos_, int tp = 0) {
-      auto to_string = [&](BPlusTreePage *node) -> std::string {
-        if (node->IsLeafPage())
-          return static_cast<BPlusTreeLeafPage *>(node)->ToString();
-        else
-          return static_cast<BPlusTreeInternalPage *>(node)->ToString();
-      };
+      // auto to_string = [&](BPlusTreePage *node) -> std::string {
+      //   if (node->IsLeafPage())
+      //     return static_cast<BPlusTreeLeafPage *>(node)->ToString();
+      //   else
+      //     return static_cast<BPlusTreeInternalPage *>(node)->ToString();
+      // };
       // std::cerr << "del "
       //             << pos_ << " " << tmp[pos_].head->pos << " "
       //             << tmp[pos_].head->pin << " " <<
@@ -886,12 +888,12 @@ class BPlusTree {
           return;
         }
     notfound:;
-      auto to_string = [&](BPlusTreePage *node) -> std::string {
-        if (node->IsLeafPage())
-          return static_cast<BPlusTreeLeafPage *>(node)->ToString();
-        else
-          return static_cast<BPlusTreeInternalPage *>(node)->ToString();
-      };
+      // auto to_string = [&](BPlusTreePage *node) -> std::string {
+      //   if (node->IsLeafPage())
+      //     return static_cast<BPlusTreeLeafPage *>(node)->ToString();
+      //   else
+      //     return static_cast<BPlusTreeInternalPage *>(node)->ToString();
+      // };
       if (pointer->head == nullptr)
         pointer->head = new PtrHead(pos_, 0, 0);
       if (pos_ == -1) {
@@ -1027,8 +1029,8 @@ public:
     else
       return static_cast<BPlusTreeInternalPage *>(node)->ToString();
   }
-  void FindPosVector(const KeyType &key, std::vector<Ptr> *v,
-                     std::vector<int> *v1) {
+  void FindPosVector(const KeyType &key, sjtu::vector<Ptr> *v,
+                     sjtu::vector<int> *v1) {
     if (header_page_id_ == -1)
       return;
     Ptr rt(&bpm, nullptr, header_page_id_);
@@ -1075,8 +1077,8 @@ public:
   BPlusTreeLeafPage *weiling = nullptr;
   bool Insert(const KeyType &key, const ValueType &value) {
 
-    std::vector<Ptr> v;
-    std::vector<int> v1;
+    sjtu::vector<Ptr> v;
+    sjtu::vector<int> v1;
     FindPosVector(key, &v, &v1);
     // std::cerr << "Insert " << key.second << " ";
     //  for (auto i : v)
@@ -1228,8 +1230,8 @@ public:
   void Remove(const KeyType &key) {
     // if(key.second == 2)
     //   std::cerr << "让我看看" << std::endl;
-    std::vector<Ptr> v;
-    std::vector<int> v1;
+    sjtu::vector<Ptr> v;
+    sjtu::vector<int> v1;
     FindPosVector(key, &v, &v1);
 
     if (v.empty())
@@ -1307,7 +1309,7 @@ public:
       header_page_id_ = -1;
   }
   // Return the value associated with a given key
-  void GetValue(const unsigned long long &key, std::vector<ValueType> *result) {
+  void GetValue(const unsigned long long &key, sjtu::vector<ValueType> *result) {
     // if(header_page_id_)
     // printtree(Ptr(&bpm, nullptr, header_page_id_));
     // static int time = 0;
@@ -1347,7 +1349,7 @@ private:
 } // namespace Bptree
 
 using pairtype = pair<unsigned long long, int>;
-std::vector<int> result;
+sjtu::vector<int> result;
 Bptree::BPlusTree<pair<unsigned long long, int>, int> Bpt("disk");
 
 // void test() {
@@ -1364,7 +1366,7 @@ Bptree::BPlusTree<pair<unsigned long long, int>, int> Bpt("disk");
 //     std::cout << "insert " << a[i] << std::endl;
 //     Bpt.printtree();
 //     Bpt.Insert({s1, a[i]}, a[i]);
-//     std::vector<int> result;
+//     sjtu::vector<int> result;
 //     if (a[i] == 70)
 //       std::cout << 233 << std::endl;
 //     Bpt.GetValue(s1, &result);
@@ -1374,7 +1376,7 @@ Bptree::BPlusTree<pair<unsigned long long, int>, int> Bpt("disk");
 //   // std::random_shuffle(a,a+100);
 //   Bpt.printtree();
 //   rf(i, range, 0) {
-//     std::vector<int> result;
+//     sjtu::vector<int> result;
 //     // if(a[i]%2)Bpt.Insert({s, a[i]}, 100 - a[i]);
 //     // else
 //     if (a[i] == 77)
@@ -1434,7 +1436,7 @@ int main(int, char **) {
         std::cout << "null\n";
       else
         std::cout << "\n"; // assert(result.size() + (i-1000)/2 == 1000);
-      result.clear();
+
     } else {
       std::cin >> com.s >> val;
       gethsh(com, hsh);
