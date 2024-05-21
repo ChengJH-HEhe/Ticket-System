@@ -35,7 +35,7 @@ namespace Bptree {
 
 #define INDEX_TEMPLATE_ARGUMENTS                                               \
   template <typename KeyType, typename ValueType,                              \
-            typename KeyComparator = std::less<KeyType>>
+            typename GetType>
 
 // define page type enum
 enum class IndexPageType { INVALID_INDEX_PAGE = 0, LEAF_PAGE, INTERNAL_PAGE };
@@ -311,7 +311,7 @@ class BPlusTree {
   };
   struct Ptr;
   struct BufferPoolManager {
-#define MaxSize 114514
+#define MaxSize 400
     DiskManager disk;
     size_t sz = 0;
     int pos[MaxSize], *rt;
@@ -518,9 +518,14 @@ public:
               static_cast<BPlusTreeInternalPage *>(rt.content)->ValueAt(i)),
           dep + 1);
   }
+  BPlusTree() = default;
   BPlusTree(std::string disk_name)
       : leaf_max_size_(LEAF_PAGE_SIZE), internal_max_size_(INTERNAL_PAGE_SIZE) {
     // page_id manager?
+    bpm.init(disk_name, &header_page_id_);
+  }
+  void Init(std::string disk_name) {
+    leaf_max_size_= LEAF_PAGE_SIZE, internal_max_size_ = INTERNAL_PAGE_SIZE;
     bpm.init(disk_name, &header_page_id_);
   }
   // find the position to insert key, if such position do not exist return
@@ -821,7 +826,7 @@ public:
       header_page_id_ = -1;
   }
   // Return the value associated with a given key
-  void GetValue(const unsigned long long &key, sjtu::vector<ValueType> *result) {
+  void GetValue(const GetType &key, sjtu::vector<ValueType> *result) {
     Ptr l = FindPos(KeyType{key, INT_MIN});
     BPlusTreeLeafPage *tmp;
     int id = -1;

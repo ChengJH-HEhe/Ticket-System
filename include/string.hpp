@@ -1,3 +1,6 @@
+#ifndef STRING_HPP
+#define STRING_HPP
+
 #include <string>
 #include <cstring>
 #include <string.h>
@@ -5,7 +8,7 @@ namespace sjtu {
 
 template<int len = 65>
 struct string {
-  char s[len];
+  char s[len + 1];
   string() { s[0] = '\0'; }
   std::string to_string() {
     std::string tmp;
@@ -59,8 +62,15 @@ struct string {
   void clear() { s[0] = '\0'; }
 };
 template<int len>
-  std::ostream &operator<<(std::ostream &out, string<len> &b) {
+  std::ostream &operator<<(std::ostream &out,const string<len> &b) {
     out << b.s;
     return out;
   }
+template<int len>
+  std::istream &operator>>(std::istream &in, string<len> &b) {
+    in >> b.s;
+    return in;
+  }
 }
+
+#endif
