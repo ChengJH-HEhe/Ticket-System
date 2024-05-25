@@ -16,5 +16,9 @@ public:
   bool operator==(const pair<T1, T2> &rhs) const {
     return first == rhs.first && second == rhs.second;
   }
+  pair<T1,T2>& operator=(const pair<T1,T2>& rhs) {
+    first = rhs.first, second = rhs.second;
+    return *this;
+  }
 };
 #endif

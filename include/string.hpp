@@ -16,6 +16,11 @@ struct string {
       tmp.push_back(s[i]);
     return tmp;
   }
+  void Init(const std::string& rhs) {
+    for(int i = 0; i < rhs.size(); ++i)
+      s[i] = rhs[i];
+    s[rhs.size()]='\0';
+  }
   string(const char *str) {
     strncpy(s, str, sizeof(s) - 1);
     s[sizeof(s) - 1] = '\0';

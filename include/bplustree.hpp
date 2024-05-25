@@ -1,15 +1,14 @@
 #ifndef BPLUSTREE_HPP
 #define BPLUSTREE_HPP
 
+#include "pair.hpp"
 #include "string.hpp"
 #include "vector.hpp"
-#include "pair.hpp"
 #include <algorithm>
-#include <iostream>
 #include <cmath>
+#include <iostream>
 
- // namespace sjtu
-
+// namespace sjtu
 
 #include <asm-generic/errno.h>
 #include <cassert>
@@ -22,10 +21,7 @@
 #include <string>
 #include <utility>
 
-
 // implement a b-plus-tree
-
-
 
 namespace Bptree {
 
@@ -34,8 +30,7 @@ namespace Bptree {
 #define LEAF_PAGE_HEADER_SIZE 24
 
 #define INDEX_TEMPLATE_ARGUMENTS                                               \
-  template <typename KeyType, typename ValueType,                              \
-            typename GetType>
+  template <typename KeyType, typename ValueType, typename GetType>
 
 // define page type enum
 enum class IndexPageType { INVALID_INDEX_PAGE = 0, LEAF_PAGE, INTERNAL_PAGE };
@@ -48,18 +43,23 @@ struct RecycleList {
   std::string recycle_file_name_;
 
   void init(std::string file_name) {
-    recycle_file_name_ = file_name  + "_Recycle";
+    recycle_file_name_ = file_name + "_Recycle";
     Recycle_filestream.open(recycle_file_name_,
                             std::ios::binary | std::ios::in | std::ios::out);
     if (!Recycle_filestream.good()) {
       Recycle_filestream.clear();
-      Recycle_filestream.open(recycle_file_name_, std::ios::binary | std::ios::trunc |
-                                             std::ios::out | std::ios::in);
+      Recycle_filestream.open(recycle_file_name_,
+                              std::ios::binary | std::ios::trunc |
+                                  std::ios::out | std::ios::in);
       end_num_ = 0;
     } else {
       Recycle_filestream.read(reinterpret_cast<char *>(&end_num_),
                               sizeof(page_id_t));
     }
+  }
+  void remove() {
+    Recycle_filestream.close();
+    std::remove(recycle_file_name_.c_str());
   }
   ~RecycleList() {
     // std::cerr << "write " << end_num_ << std::endl;
@@ -86,6 +86,11 @@ public:
     }
 
     dustbin.init(db_file);
+  }
+  void remove() {
+    db_io_.close();
+    std::remove(file_name_.c_str());
+    dustbin.remove();
   }
   ~DiskManager() { db_io_.close(); }
   /**
@@ -184,16 +189,16 @@ class BPlusTree {
     */
     pair<size_t, page_id_t> find(const KeyType &key) {
       size_t pos = 0, sz = GetSize();
-      for(int length = (1 << int(log2(sz))); length; length >>= 1)
+      for (int length = (1 << int(log2(sz))); length; length >>= 1)
         if (pos + length < sz && !(key < KeyAt(pos + length)))
           pos += length;
-      return {pos, array_[pos].second};
+      return pair<size_t, page_id_t>(pos, array_[pos].second);
     }
     /*  array_[index] = pair{key, val}
         顺次移动
     */
     void ModKeyAt(const KeyType &key, int index) { array_[index].first = key; }
-    void SetKeyAt(int index, const KeyType &key, const ValueType &val) {
+    void SetKeyAt(int index, const KeyType &key, const page_id_t &val) {
       for (int i = GetSize(); i > index; --i)
         array_[i] = std::move(array_[i - 1]);
       IncreaseSize(1);
@@ -233,7 +238,7 @@ class BPlusTree {
 
   public:
     // Flexible array member for page data.
-    MappingType array_[INTERNAL_PAGE_SIZE];
+    InternalMappingType array_[INTERNAL_PAGE_SIZE];
   };
   struct BPlusTreeLeafPage : public BPlusTreePage {
   public:
@@ -255,7 +260,7 @@ class BPlusTree {
     auto ValAt(int index) const -> ValueType { return array_[index].second; }
     size_t find(const KeyType &key, const ValueType &value) {
       size_t pos = 0, sz = GetSize();
-      for(int length = (1 << int(log2(sz))); length; length >>= 1)
+      for (int length = (1 << int(log2(sz))); length; length >>= 1)
         if (pos + length < sz && !(key < KeyAt(pos + length)))
           pos += length;
       if (KeyAt(pos) < key)
@@ -273,6 +278,7 @@ class BPlusTree {
         array_[i] = std::move(array_[i + 1]);
       IncreaseSize(-1);
     }
+    void ModKeyAt(const KeyType &key, int index) { array_[index].first = key; }
     /**
      * @brief For test only return a string representing all keys in
      * this leaf page formatted as "(key1,key2,key3,...)"
@@ -325,12 +331,17 @@ class BPlusTree {
       root.open(root_name, std::ios::binary | std::ios::in | std::ios::out);
       if (!root.good()) {
         root.clear();
-        root.open(root_name, std::ios::binary | std::ios::trunc | std::ios::out |
-                              std::ios::in);
+        root.open(root_name, std::ios::binary | std::ios::trunc |
+                                 std::ios::out | std::ios::in);
         *header_id = -1;
       } else {
         root.read(reinterpret_cast<char *>(header_id), sizeof(int));
       }
+    }
+    void remove() {
+      disk.remove();
+      root.close();
+      std::remove(root_name.c_str());
     }
     void getpos(PtrHead *head) { head->pos = disk.dustbin.GetVacancy(); }
     void setpos(PtrHead *head, int pos_) { head->pos = pos_; }
@@ -344,8 +355,7 @@ class BPlusTree {
       else
         sz = sizeof(BPlusTreeInternalPage);
       disk.WritePage(head->pos, reinterpret_cast<const char *>(content),
-                       reinterpret_cast<const char *>(&ind),
-                       sz);
+                     reinterpret_cast<const char *>(&ind), sz);
       head->pin = 0;
     }
     void ReadPage(page_id_t id, BPlusTreePage *&content) {
@@ -524,8 +534,11 @@ public:
     // page_id manager?
     bpm.init(disk_name, &header_page_id_);
   }
+  void remove() {
+    bpm.remove();
+  }
   void Init(std::string disk_name) {
-    leaf_max_size_= LEAF_PAGE_SIZE, internal_max_size_ = INTERNAL_PAGE_SIZE;
+    leaf_max_size_ = LEAF_PAGE_SIZE, internal_max_size_ = INTERNAL_PAGE_SIZE;
     bpm.init(disk_name, &header_page_id_);
   }
   // find the position to insert key, if such position do not exist return
@@ -593,7 +606,6 @@ public:
   }
   BPlusTreeLeafPage *weiling = nullptr;
   bool Insert(const KeyType &key, const ValueType &value) {
-
     sjtu::vector<Ptr> v;
     sjtu::vector<int> v1;
     FindPosVector(key, &v, &v1);
@@ -825,9 +837,44 @@ public:
     if (cont->GetSize() == 0)
       header_page_id_ = -1;
   }
+  // update key&value -> newkey&value
+  void update(const KeyType &key, const KeyType &newkey) {
+    // if(key.second == 2)
+    //   std::cerr << "让我看看" << std::endl;
+    sjtu::vector<Ptr> v;
+    sjtu::vector<int> v1;
+    FindPosVector(key, &v, &v1);
+    if (v.empty())
+      return;
+    Ptr pos = v.back();
+    BPlusTreePage *cont = pos.content;
+    size_t index =
+        static_cast<BPlusTreeLeafPage *>(cont)->find(key, key.second);
+    if (index % 2 == 0)
+      assert(0);
+    index >>= 1;
+    static_cast<BPlusTreeLeafPage *>(cont)->ModKeyAt( newkey, index);
+    pos.Dirty();
+  }
   // Return the value associated with a given key
+  int find(const GetType &key) {
+    sjtu::vector<int> result;
+    GetValue(key, &result);
+    return result.empty() ? 0 : result[0];
+  }
+  void GetUniqueValue(const GetType &key, ValueType &val) {
+    Ptr l = FindPos(KeyType{key, val});
+    BPlusTreeLeafPage *tmp;
+    if (l.content)
+      tmp = static_cast<BPlusTreeLeafPage *>(l.content);
+    else
+      return;
+    for (int i = 0; i < tmp->GetSize(); ++i)
+      if (tmp->KeyAt(i).second.id == val.id)
+        val = tmp->ValAt(i);
+  }
   void GetValue(const GetType &key, sjtu::vector<ValueType> *result) {
-    Ptr l = FindPos(KeyType{key, INT_MIN});
+    Ptr l = FindPos(KeyType{key, ValueType()});
     BPlusTreeLeafPage *tmp;
     int id = -1;
     // printtree();

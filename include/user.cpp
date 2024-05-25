@@ -13,15 +13,13 @@ int UserManager::find_user(const UserNameT& cur_username, int type = 0) {
     user.GetValue(cur_username, &result);
   else 
     loginUser.GetValue(cur_username, &result);
-  return result.empty() ? -1 : result[0];
+  return result.empty() ? 0 : result[0];
 }
 void UserManager::get_user(User& olduser, int UserID) {
-  User_filestream.seekg(offset + (UserID - 1) * sizeof(User));
-  User_filestream.read(reinterpret_cast<char *>(&olduser), sizeof(User)); 
+  UserFile.get_content(olduser, UserID);
 }
 void UserManager::modify_user(User& olduser, int UserID) {
-  User_filestream.seekp(offset + (UserID - 1) * sizeof(User));
-  User_filestream.write(reinterpret_cast<const char *>(&olduser), sizeof(User)); 
+  UserFile.modify_content(olduser, UserID);
 }
 
 bool UserManager::direct_find_user(const UserNameT& cur_username, User& OldUser, bool old) {
@@ -43,7 +41,8 @@ int UserManager::add_user(const UserNameT& cur_username, const UserNameT& userna
   }
   User newuser(username, password, name, email, type);
   ++UserCount;
-  user.Insert(username, UserCount);
+  UserFile.modify_content(newuser, UserCount);
+  user.Insert({username,UserCount}, UserCount);
   return UserCount;
  }
 
@@ -56,7 +55,7 @@ int UserManager::login(const UserNameT& username, const PassT& password) {
     return -1;
   if(!(CurUser.password == password))
     return -1;
-  loginUser.Insert(username, id);
+  loginUser.Insert({username,id}, id);
   return 0;
 }
 
@@ -64,7 +63,7 @@ int UserManager::logout(const UserNameT& username) {
   User CurUser;
   int id = direct_find_user(username, CurUser, 1);
   if(id > 0) 
-     return loginUser.Remove(username),0;
+     return loginUser.Remove({username,id}),0;
   else return -1;
 }
 

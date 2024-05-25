@@ -19,36 +19,23 @@ struct User{
 struct UserManager {
   // give next page_id
   int UserCount;
-#define offset sizeof(UserCount)
-  std::fstream User_filestream;
-  std::string User_file_name;
+  FileManager<User> UserFile;
   // UserName -> unique id
-  Bptree::BPlusTree<UserNameT , int, UserNameT> user, loginUser;
-  void Init(std::string file_name) {
-    User_file_name = file_name  + "_ID";
-    user.Init(file_name);
-    loginUser.Init(User_file_name + "_Log");
-    User_filestream.open(User_file_name,
-                            std::ios::binary | std::ios::in | std::ios::out);
-    if (!User_filestream.good()) {
-      User_filestream.clear();
-      User_filestream.open(User_file_name, std::ios::binary | std::ios::trunc |
-                                             std::ios::out | std::ios::in);
-      UserCount = 0;
+  Bptree::BPlusTree<pair<UserNameT,int> , int, UserNameT> user, loginUser;
+  void remove(int type = 0) {
+    if(!type) {
+      UserFile.remove();
+      user.remove(), loginUser.remove();
     } else {
-      User_filestream.read(reinterpret_cast<char *>(&UserCount),
-                              sizeof(int));
+      loginUser.remove();
     }
   }
-  ~UserManager() {
-    // std::cerr << "write " << UserCount << std::endl;
-    User_filestream.seekp(0);
-    User_filestream.write(reinterpret_cast<const char *>(&UserCount),
-                             sizeof(int));
-    User_filestream.close();
+  void Init(std::string file_name) {
+    UserFile.Init(file_name  + "_ID");
+    user.Init(file_name);
+    loginUser.Init(file_name + "_ID_Log");
   }
-  int GetVacancy() { return ++UserCount; }
-  void recycle(int pg) {}
+int GetVacancy() { return ++UserCount; }
 void get_user(User& user, int UserID); 
 void modify_user(User& user, int UserID);
 int find_user(const UserNameT& cur_username, int type);

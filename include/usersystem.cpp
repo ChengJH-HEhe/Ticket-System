@@ -1,5 +1,7 @@
 #include "usersystem.hpp"
 #include "config.h"
+#include <sstream>
+
 
 void usersystem::add_user(std::stringstream& in) {
   std::string type;
