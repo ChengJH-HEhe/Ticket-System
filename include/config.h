@@ -4,6 +4,8 @@
 #include "string.hpp"
 #include <fstream>
 #include <string>
+#include <iostream>
+
 using UserNameT = sjtu::string<20>;
 using PassT = sjtu::string<30>;
 using NameT = sjtu::string<15>;
@@ -26,28 +28,32 @@ template <typename T> struct FileManager {
                                      std::ios::out | std::ios::in);
       Count = 0;
     } else {
+      filestream.seekg(0);
       filestream.read(reinterpret_cast<char *>(&Count), sizeof(int));
     }
   }
   void remove() {
     filestream.close();
+    Count = -1;
     std::remove(file_name.c_str());
   }
   ~FileManager() {
     // std::cerr << "write " << UserCount << std::endl;
+    if(Count < 0) return; 
     filestream.seekp(0);
     filestream.write(reinterpret_cast<const char *>(&Count), sizeof(int));
     filestream.close();
   }
   void get_content(T &user, int UserID) {
+    //std::cout << "USERID" << UserID << std::endl;
     filestream.seekg(ofset + (UserID - 1) * sizeof(T));
     filestream.read(reinterpret_cast<char *>(&user), sizeof(T));
   }
-  // 只写一个会不会太浪费？
-  void modify_content(const T &user, int UserID) {
+  void modify_content(T &user, int UserID) {
     filestream.seekp(ofset + (UserID - 1) * sizeof(T));
     filestream.write(reinterpret_cast<const char *>(&user), sizeof(T));
   }
+  // 只写一个会不会太浪费？
   void modify_array(T *arr, int size, int UserID) {
     filestream.seekp(ofset + (UserID - 1) * sizeof(T));
     filestream.write(reinterpret_cast<const char *>(arr), size * sizeof(T));
@@ -62,7 +68,18 @@ inline short time_distance(const short &a, const short &b) {
 }
 
 inline short minute_distance(const short &a, const short &b) {
-  return (b / 100 - a / 100) * 60 + b % 100 - a % 100;
+  return b - a;
+}
+
+
+inline short calc_minute(const std::string &input) {
+  return (input[0]) * 600 + (input[1]) * 60 + (input[3]) * 10 + (input[4]) -
+         '0' * 671;
+}
+
+inline short calc_time(const std::string &input) {
+  return (input[0]) * 1000 + (input[1]) * 100 + (input[3]) * 10 + (input[4]) -
+         '0' * 1111;
 }
 
 struct clck {
@@ -71,18 +88,18 @@ struct clck {
   void init(short rtim = 0, short hm_ = 0) { tim = rtim, hm = hm_; }
   std::string to_string() {
     std::string res = "0";
-    res += std::to_string(tim / 100) + "-" + std::to_string(tim % 100) + " ";
-    if (hm / 100 < 10) {
+    res += std::to_string(tim / 100) + "-" + (tim%100<10?"0":"") + std::to_string(tim % 100) + " ";
+    if (hm / 60 < 10) {
       res.append("0");
-      res.push_back('0' + hm / 100);
+      res.push_back('0' + hm / 60);
     } else
-      res.append(std::to_string(hm / 100));
+      res.append(std::to_string(hm / 60));
     res.append(":");
-    if (hm % 100 < 10) {
+    if (hm % 60 < 10) {
       res.append("0");
-      res.push_back('0' + hm % 100);
+      res.push_back('0' + hm % 60);
     } else
-      res.append(std::to_string(hm % 100));
+      res.append(std::to_string(hm % 60));
     return res;
   }
   clck forth(int add) {
@@ -90,13 +107,13 @@ struct clck {
     return tmp.add_forth(add);
   }
   clck &add_forth(int add) {
-    short newm = hm % 100 + add;
-    hm -= hm % 100;
-    hm /= 100; // only hours
+    short newm = hm % 60 + add;
+    hm -= hm % 60;
+    hm /= 60; // only hours
     hm += newm / 60, newm %= 60;
     int lim[3] = {30, 31, 31};
     short newh = hm / 24;
-    hm %= 24; hm *= 100; hm += newm;// back h & m
+    hm %= 24; hm *= 60; hm += newm;// back h & m
     tim += newh; // most 3 days
     if (tim % 100 > lim[tim / 100 - 6])
       tim = (tim / 100 + 1) * 100 + (tim % 100 - lim[tim / 100 - 6]);
@@ -107,9 +124,10 @@ struct clck {
     auto rem = del / 1440;
     int lim[] = {31, 30, 31, 31};
     short tim1 = tim;
+    // rem 这么多天 801 - 1 - 100 + day[7] : 7/31
     while (rem >= tim1 % 100) {
-      tim1 = tim1 / 100 * 100 - 100 + lim[tim1 / 100 - 6];
       rem -= tim1 % 100;
+      tim1 = tim1 / 100 * 100 - 100 + lim[tim1 / 100 - 6];
       if (tim1 < 601)
         return -1;
     }

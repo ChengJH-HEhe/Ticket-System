@@ -16,12 +16,18 @@ private:
   void exit();
 public:
   // 传进一个 stringstream 然后开始分系统
+  
+  void exi() {
+    userSystem.exit();
+    trainSystem.exit();
+    ticketSystem.exit();
+  }
   mainsystem() {
     userSystem.Init("User");
     trainSystem.Init("Train");
     ticketSystem.Init("Ticket");
   }
-  void init(std::stringstream &in);
+  bool init(std::stringstream &in);
 };
 
 #endif

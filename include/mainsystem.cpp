@@ -1,5 +1,6 @@
 
 #include "mainsystem.hpp"
+#include "config.h"
 #include <sstream>
 std::string users[] = {"add_user", "login", "logout", "query_profile",
                        "modify_profile"};
@@ -15,20 +16,17 @@ void mainsystem::buy_ticket(std::stringstream &in) {
   UserNameT uname;
   int uid;
   std::string type;
-  in >> type;
-  in >> uname;
-  if (!(uid = userSystem.um.find_user(uname, 1))) {
-    std::cout << -1 << std::endl;
-    return;
-  }
   Loginfo ins;
   while (in >> type) {
     switch (type[1]) {
+    case 'u':
+      in >> uname;
+      break;
     case 'i':
       in >> ins.name;
       break;
     case 'd':
-      in >> ins.s.tim;
+      in >> type, ins.s.tim = calc_time(type);
       break;
     case 'n':
       in >> ins.num;
@@ -46,37 +44,57 @@ void mainsystem::buy_ticket(std::stringstream &in) {
       break;
     }
   }
-
+  if (!(uid = userSystem.um.find_user(uname, 1))) {
+    std::cout << -1 << std::endl;
+    return;
+  }
   int id1 = trainSystem.TM.find_train(ins.name), id2;
   // trainsystem check seat?
   if (!id1 || !(id2 = trainSystem.TM.find_release(id1))) {
     std::cout << "-1" << std::endl;
     return;
   }
+
   ins.trainid = id1;
   // we need to get the traininfo
   TrainInfo infos = trainSystem.get_TrainInfo(ins.sts, id1),
             infot = trainSystem.get_TrainInfo(ins.eds, id1);
-  ins.stid = infos.stid, ins.edid = infot.stid;
-  ins.price = infot.price - infos.price;
-  ins.s.tim = ins.s.back(infos.starttime + infos.st.hm);
+  if(infos.id == -1 || infot.id == -1) {
+    std::cout << "-1" << std::endl;
+  }
+  
+  ins.stid = infos.stid, ins.edid = infot.stid; // station-id
+  ins.price = infot.price - infos.price; // price
+
+  ins.s.tim = ins.s.back(infos.starttime +  infos.st.hm); // date-back
   if (infos.saleDate1 < ins.s.tim || infos.saleDate0 > ins.s.tim) {
     std::cout << "-1" << std::endl;
     return;
-  }
-  ins.stt = ins.s.forth(infos.starttime), ins.edt = ins.s.forth(infot.stoptime);
+  } // not in the interval
+  
+  // time & saledate
   ins.s.hm = infos.st.hm;
+  ins.stt = ins.s.forth(infos.starttime), ins.edt = ins.s.forth(infot.stoptime);
   ins.saledate = infos.saleDate0;
-  // id1 + time_distance(should be correct)
-  if (trainSystem.check(id1 + time_distance(infos.saleDate0, ins.s.tim),
+  // id2 + time_distance(should be correct)
+  if (trainSystem.check(id2 + time_distance(ins.saledate, ins.s.tim),
                         ins.stid, ins.edid, ins.num))
-    ticketSystem.buy_ticket(uid, ins, 1),
-        trainSystem.TM.update_seat(id1, ins.stid, ins.edid, ins.num);
+    ticketSystem.buy_ticket(uid, ins, 1, 1),
+        trainSystem.TM.update_seat(id2 + time_distance(ins.saledate, ins.s.tim), ins.stid, ins.edid, ins.num);
   else
-    ticketSystem.buy_ticket(uid, ins, 0);
+    ticketSystem.buy_ticket(uid, ins, 0, 1);
 }
 void mainsystem::query_order(std::stringstream &in) {
-  ticketSystem.query_order(in);
+  int uid;
+  std::string type;
+  UserNameT username;
+  in >> type >> username;
+  uid = userSystem.um.find_user(username, 1);
+  if(!uid) {
+    std::cout << "-1\n";
+  } else {
+    ticketSystem.query_order(uid);
+  }
 }
 void mainsystem::refund_ticket(std::stringstream &in) {
   int uid, id = 1;
@@ -95,36 +113,49 @@ void mainsystem::refund_ticket(std::stringstream &in) {
   if (!(uid = userSystem.um.find_user(username, 1))) {
     return std::cout << "-1\n", void();
   }
-  int tid;
-  sjtu::vector<int> res1 = ticketSystem.refund_ticket(uid, id, tid);
+  int seatid, trainid;
+  // LOGID userid
+  sjtu::vector< pair<int,int> > res1 = ticketSystem.refund_ticket(uid, id, trainid);
   if (res1.empty())
     return;
-  for (int i = res1.size() - 1; i >= 0; --i) {
+  
+  seatid = trainSystem.TM.find_release(trainid);
+  // update seat for res1.back()
+  // update trainsystem 
+  // succuss not tui
+  for (int i = int(res1.size()) - 1; i >= 0; --i) {
     Loginfo ins;
-    ticketSystem.Flog.get_content(ins, res1[i]);
-    if (trainSystem.check(tid + time_distance(ins.saledate, ins.s.tim),
+    ticketSystem.Flog.get_content(ins, res1[i].first);
+    if(i == res1.size() - 1) {
+      trainSystem.TM.update_seat(seatid + time_distance(ins.saledate, ins.s.tim), 
+      ins.stid, ins.edid, -ins.num);
+    } else {
+      seatid = trainSystem.TM.find_release(ins.trainid);
+      if (trainSystem.check(seatid + time_distance(ins.saledate, ins.s.tim),
                           ins.stid, ins.edid, ins.num)) {
-      trainSystem.TM.update_seat(tid, ins.stid, ins.edid, -ins.num);
-      ticketSystem.buy_ticket(uid, ins, 1);
-      ticketSystem.pnd.Remove({tid, res1[i]});
+        trainSystem.TM.update_seat(seatid + time_distance(ins.saledate, ins.s.tim), ins.stid, ins.edid, -ins.num);
+      // ulog update : 0 -> 1
+      // user[id] pnd. -> userid: 
+        ticketSystem.ulog.update({trainid, {res1[i].first, 0}},{trainid, {res1[i].first, 1}});
+        ticketSystem.pnd.Remove({trainid, res1[i]});
+      }
     }
   }
 }
 void mainsystem::clean() {
-  userSystem.remove();
-  trainSystem.remove();
-  ticketSystem.remove();
+  std::cout << "0\n";
 }
 void mainsystem::exit() {
-  userSystem.remove(1);
   std::cout << "bye\n";
+  userSystem.um.loginUser.exit(1);
 }
-
-void mainsystem::init(std::stringstream &in) {
+bool mainsystem::init(std::stringstream &in) {
   std::string tim;
   in >> tim;
   std::string cmd;
   std::cout << tim << " ";
+  if(tim == "[8857]")
+    std::cerr << 233 << '\n';
   in >> cmd;
   for (int i = 0; i < 5; ++i) {
     if (users[i] == cmd) {
@@ -147,10 +178,10 @@ void mainsystem::init(std::stringstream &in) {
       default:
         break;
       }
-      break;
+      return 1;
     }
   }
-  for (int i = 0; i < 5; ++i) {
+  for (int i = 0; i < 6; ++i) {
     if (trains[i] == cmd) {
       switch (i) {
       case 0:
@@ -174,7 +205,7 @@ void mainsystem::init(std::stringstream &in) {
       default:
         break;
       }
-      break;
+      return 1;
     }
   }
   for (int i = 0; i < 5; ++i)
@@ -192,10 +223,13 @@ void mainsystem::init(std::stringstream &in) {
       case 3:
         clean();
         break;
-      case 4:
+      case 4: {
         exit();
+        return 0;
+      }
         break;
       }
-      break;
+      return 1;
     }
+  return 1;
 }

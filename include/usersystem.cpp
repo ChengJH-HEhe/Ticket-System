@@ -11,9 +11,10 @@ void usersystem::add_user(std::stringstream& in) {
   NameT name;
   MailT email;
   int tp;
-  in >> cur >> now;
   while(in>>type) {
     switch(type[1]){
+      case 'c':in >> cur;break;
+      case 'u':in >> now; break;
       case 'p':in>>password;break;
       case 'n':in>>name;break;
       case 'm':in>>email;break;
@@ -26,17 +27,35 @@ void usersystem::add_user(std::stringstream& in) {
 void usersystem::login(std::stringstream& in) {
   UserNameT cur;
   PassT password;
-  in>>cur>>password;
+  std::string type;
+  while(in>>type) {
+    switch(type[1]){
+      case 'u':in >> cur;break;
+      case 'p':in>>password;break;
+    }
+  }
   std::cout << um.login(cur, password) << std::endl;
 }
 void usersystem::logout(std::stringstream& in) {
   UserNameT cur;
-  in >> cur;
+  std::string type;
+  while(in>>type) {
+    switch(type[1]){
+      case 'u':in >> cur;break;
+    }
+  }
   std::cout << um.logout(cur) << std::endl;
 }
 void usersystem::query_profile(std::stringstream& in) {
   UserNameT cur,user;
-  in>>cur>>user;
+  std::string type;
+  // -p -n -m -g
+  while(in>>type) {
+    switch(type[1]){
+      case 'c':in >> cur;break;
+      case 'u':in >> user; break;
+    }
+  }
   std::cout << um.query_profile(cur, user) << std::endl;
 }
 void usersystem::modify_profile(std::stringstream& in) {
@@ -45,10 +64,11 @@ void usersystem::modify_profile(std::stringstream& in) {
   PassT password;
   NameT name;
   MailT email;
-  int tp;
-  in >> cur >> now;
+  int tp = -1;
   while(in>>type) {
     switch(type[1]){
+      case 'c':in >> cur;break;
+      case 'u':in >> now; break;
       case 'p':in>>password;break;
       case 'n':in>>name;break;
       case 'm':in>>email;break;

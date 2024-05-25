@@ -7,18 +7,27 @@
 #include <string>
 
 // query_ticket
+// one stop form stoptime -> starttime id -> trainid
+// travel form: starttime -> stoptime id -> release_id
 struct TrainInfo{
   TrainInfo() = default;
   TrainT name;
   short stid, edid; // station id
   int price; // delta price since start
   int stoptime, starttime; // delta time since start -1 invalid
-  int id; // trainid
+  int id; // trainid 
   short saleDate0, saleDate1;// 
   // start date
   clck st;// start time
-  TrainInfo(TrainT name_, short saledate_0, short saledate_1, clck st_, short stid_ = 0, short edid_ = 0, int price_ = 0, int stoptime_ = 0, int starttime_ = 0, int id_ = 0) : st(st_), name(name_),
-  price(price_), saleDate0(saledate_0),saleDate1(saledate_1), stoptime(stoptime_), starttime(starttime_), id(id_) {};
+  TrainInfo(TrainT name_, short saledate_0, short saledate_1, clck st_, 
+  short stid_ = 0, short edid_ = 0, 
+  int price_ = 0, 
+  int stoptime_ = 0, int starttime_ = 0, 
+  int id_ = 0) :
+   st(st_), name(name_),
+  price(price_), saleDate0(saledate_0),saleDate1(saledate_1), 
+  stoptime(stoptime_), starttime(starttime_), id(id_),
+  stid(stid_), edid(edid_) {};
   bool operator < (const TrainInfo& rhs) const {
     return id < rhs.id;
     // 注意已经按id排序 加一个限定的find 额外getvalue多一个东西 只找出id的值
@@ -39,8 +48,6 @@ struct Train{
   short stopoverTimes[100];
   short saleDate[2];
   char type;
-  int calc_minute(const short&);
-  short calc_time(const std::string&);
   void Init(std::stringstream& in);
   template<typename T>
   void Init_string(T* idx, std::string& input) {
@@ -67,6 +74,7 @@ struct Reinfo{
 struct TrainManager {
   // id : begin ~ end no more than 60 copies from saledate; -id -d -> -Tid;
   // query_train basic_info; ticket: seat[100] * 60 trains
+  void exit();
   Bptree::BPlusTree<pair<TrainT,int>, int, TrainT> TrainID;
   Bptree::BPlusTree<pair<int,int>, int, int> release;
   // from stations to the id price time
@@ -80,6 +88,7 @@ struct TrainManager {
     ReFile.Init(file_name + "_Re");
     TrainID.Init(file_name + "_id");
     release.Init(file_name + "_release");
+    seat.Init(file_name + "_seat");
   }
   void remove() {
     TrainFile.remove();

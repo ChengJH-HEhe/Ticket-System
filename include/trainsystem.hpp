@@ -5,7 +5,10 @@
 
 struct trainsystem{
   TrainManager TM;
-  void Init(char* file_name) {TM.Init(file_name);}
+  void exit(){
+    TM.exit();
+  }
+  void Init(const char* file_name) {TM.Init(file_name);}
   void add_train(std::stringstream& in);
   void delete_train(std::stringstream& in);
   void release_train(std::stringstream& in);

@@ -22,30 +22,31 @@ void UserManager::modify_user(User& olduser, int UserID) {
   UserFile.modify_content(olduser, UserID);
 }
 
-bool UserManager::direct_find_user(const UserNameT& cur_username, User& OldUser, bool old) {
+int UserManager::direct_find_user(const UserNameT& cur_username, User& OldUser, bool old) {
   int olduserID = find_user(cur_username,old);
-  if(olduserID < 0) return 0;
+  if(olduserID <= 0) return 0;
   get_user(OldUser, olduserID);
-  return 1;
+  return olduserID;
 }
-
 int UserManager::add_user(const UserNameT& cur_username, const UserNameT& username, 
   const PassT& password,
   const NameT& name, 
   const MailT& email, int type) {
-  if(!UserCount) type = 10;
-  if(cur_username.size()) {
+    //std::cout << "add " << username << " " << UserFile.Count << std::endl;
+  if(!UserFile.Count) type = 10;
+  else if(cur_username.size()) {
     User OldUser;
     if(!direct_find_user(cur_username, OldUser, 1) || OldUser.type <= type)
       return -1;
   }
   User newuser(username, password, name, email, type);
-  ++UserCount;
-  UserFile.modify_content(newuser, UserCount);
-  user.Insert({username,UserCount}, UserCount);
-  return UserCount;
+  //std::cout<<newuser.name << std::endl;
+  ++UserFile.Count;
+  UserFile.modify_content(newuser, UserFile.Count);
+  user.Insert({username,UserFile.Count}, UserFile.Count);
+  //std::cout << "username " << UserFile.Count << std::endl;
+  return 0;
  }
-
 int UserManager::login(const UserNameT& username, const PassT& password) {
   User CurUser;
   int id;
@@ -55,10 +56,10 @@ int UserManager::login(const UserNameT& username, const PassT& password) {
     return -1;
   if(!(CurUser.password == password))
     return -1;
+  //std::cout << username << " login as " << id << std::endl;
   loginUser.Insert({username,id}, id);
   return 0;
 }
-
 int UserManager::logout(const UserNameT& username) {
   User CurUser;
   int id = direct_find_user(username, CurUser, 1);
@@ -66,22 +67,25 @@ int UserManager::logout(const UserNameT& username) {
      return loginUser.Remove({username,id}),0;
   else return -1;
 }
-
 std::string UserManager::query_profile(const UserNameT& cur_username, const UserNameT& username) {
   int Nid;
   User CurUser,  NewUser;
   int Cid = direct_find_user(cur_username, CurUser, 1);
-  if(Cid < 0) return "-1";
+  //std::cout << "find " << cur_username << " " << Cid << " " << std::endl;
+  if(!Cid) return "-1";
   Cid = CurUser.type;
+  if(cur_username == username)
+    return CurUser.profile();
   Nid = direct_find_user(username, NewUser, 0);
-  if(Nid > 0 && NewUser.type <= Cid) 
+  //std::cout << "find " << username << " " << Nid << " " << NewUser.type << " " << std::endl;
+  if(Nid > 0 && NewUser.type < Cid) 
     return NewUser.profile();
   else return "-1";
 }
 
 std::string UserManager::Query_profile(User& CurUser, User& NewUser, int& Nid, const UserNameT& cur_username, const UserNameT& username) {
   int Cid = direct_find_user(cur_username, CurUser, 1);
-  if(Cid < 0) return "-1";
+  if(!Cid) return "-1";
   Cid = CurUser.type;
   Nid = direct_find_user(username, NewUser, 0);
   if(Nid > 0 && NewUser.type <= Cid) 

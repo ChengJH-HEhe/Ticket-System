@@ -18,10 +18,13 @@ struct User{
 
 struct UserManager {
   // give next page_id
-  int UserCount;
   FileManager<User> UserFile;
   // UserName -> unique id
   Bptree::BPlusTree<pair<UserNameT,int> , int, UserNameT> user, loginUser;
+  void exit() {
+    user.exit();
+    loginUser.exit();
+  }
   void remove(int type = 0) {
     if(!type) {
       UserFile.remove();
@@ -35,11 +38,10 @@ struct UserManager {
     user.Init(file_name);
     loginUser.Init(file_name + "_ID_Log");
   }
-int GetVacancy() { return ++UserCount; }
 void get_user(User& user, int UserID); 
 void modify_user(User& user, int UserID);
 int find_user(const UserNameT& cur_username, int type);
-bool direct_find_user(const UserNameT& cur_username, User& OldUser, bool old);
+int direct_find_user(const UserNameT& cur_username, User& OldUser, bool old);
 int add_user(const UserNameT& cur_username, const UserNameT& username, 
 const PassT& password,
  const NameT& name, 

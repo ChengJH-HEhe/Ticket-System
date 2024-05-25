@@ -8,7 +8,10 @@ struct usersystem {
   void remove(int type = 0) {
     um.remove(type);
   }
-  void Init(char* file_name) { um.Init(file_name); }
+  void exit() {
+    um.exit();
+  }
+  void Init(const char* file_name) { um.Init(file_name); }
   void add_user(std::stringstream& in);
   void login(std::stringstream& in);
   void logout(std::stringstream& in);

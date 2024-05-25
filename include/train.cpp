@@ -15,10 +15,11 @@ TrainInfo TrainManager::get_one_TrainInfo(const StationT &name, const int &id) {
 
 void Train::Init(std::stringstream &in) {
   // -i -n -m -s -p -x -t -o -d -y
-  std::string type;
+  std::string typ;
   int tp;
-  while (in >> type) {
-    switch (type[1]) {
+  short tmp;
+  while (in >> typ) {
+    switch (typ[1]) {
     case 'i':
       in >> trainID;
       break;
@@ -29,36 +30,30 @@ void Train::Init(std::stringstream &in) {
       in >> seatNum;
       break;
     case 's':
-      in >> type, Init_string<StationT>(stations, type);
+      in >> typ, Init_string<StationT>(stations, typ);
       break;
     case 'p':
-      in >> type, Init_int(prices, type);
+      in >> typ, Init_int(prices, typ);
       break;
     case 'x':
-      in >> startTime;
+      in >> typ, startTime = calc_minute(typ);
       break;
     case 't':
-      in >> type, Init_short(travelTimes, type);
+      in >> typ, Init_short(travelTimes, typ);
       break;
     case 'o':
-      in >> type, Init_short(stopoverTimes, type);
+      in >> typ, Init_short(stopoverTimes, typ);
       break;
     case 'd':
-      in >> type, Init_time(saleDate, type);
+      in >> typ, Init_time(saleDate, typ);
       break;
+    case 'y':
+      in >> this->type;
+      break; 
     default:
       break;
     }
   }
-}
-
-int Train::calc_minute(const short& a) {
-  return a%100 + a/100*60;
-}
-
-short Train::calc_time(const std::string &input) {
-  return (input[0]) * 1000 + (input[1]) * 100 + (input[3]) * 10 + (input[4]) -
-         '0' * 1111;
 }
 
 void Train::Init_time(short *idx, std::string &input) {
@@ -95,6 +90,11 @@ void Train::Init_int(int *idx, std::string &input) {
   *idx = tmp;
 }
 
+void TrainManager::exit() {
+  TrainID.exit();
+  release.exit();
+}
+
 int TrainManager::find_release(const int &id) {
   sjtu::vector<int> result;
   release.GetValue(id, &result);
@@ -112,16 +112,20 @@ void TrainManager::add_train(std::stringstream &in) {
   if (find_train(new_Train.trainID))
     return std::cout << "-1" << std::endl, void();
   // i ~ i+1 站
-  for (int i = 1; i < new_Train.stationNum; ++i) {
+  for (int i = 1; i < new_Train.stationNum - 1; ++i) {
     new_Train.prices[i] += new_Train.prices[i - 1];
   }
-  TrainFile.modify_content(new_Train, ++TrainFile.Count);
+  ++TrainFile.Count;
+  // std::cout << new_Train.trainID << " " << TrainFile.Count << std::endl;
+  TrainID.Insert({new_Train.trainID, TrainFile.Count}, TrainFile.Count);
+  TrainFile.modify_content(new_Train, TrainFile.Count);
   std::cout << "0" << std::endl;
 }
 
 void TrainManager::delete_train(std::stringstream &in) {
   TrainT r;
-  in >> r;
+  std::string type;
+  in >> type >> r;
   int id;
   if (!(id = find_train(r)) || release.find(id))
     return std::cout << "-1\n", void();
@@ -130,7 +134,8 @@ void TrainManager::delete_train(std::stringstream &in) {
 }
 void TrainManager::release_train(std::stringstream &in) {
   TrainT r;
-  in >> r;
+  std::string type;
+  in >> type >> r;
   int id;
   if (!(id = find_train(r)) || release.find(id))
     return std::cout << "-1\n", void();
@@ -139,7 +144,7 @@ void TrainManager::release_train(std::stringstream &in) {
   Train old;
   TrainFile.get_content(old, id);
   release.Insert(pair<int, int>(id, ReFile.Count), ReFile.Count);
-  int tim = time_distance(old.saleDate[0], old.saleDate[1]);
+  int tim = time_distance(old.saleDate[0], old.saleDate[1]) + 1;
   Reinfo *tmp = new Reinfo[tim];
   for (int i = 0; i < tim; ++i)
     tmp[i] = Reinfo(old.seatNum, old.stationNum);
@@ -151,50 +156,71 @@ void TrainManager::release_train(std::stringstream &in) {
                  0, 0, -1, 0, id);
 
   for (int i = 0; i < old.stationNum - 1; ++i) {
+    //  std::cout << "Insert " << old.stations[i] << " " << info.stid << " " <<
+    //  info.price << " " << info.id << " " << info.starttime << std::endl;
     seat.Insert(pair<StationT, TrainInfo>(old.stations[i], info), info);
+    info.price = old.prices[i];
     if (!i)
       info.stoptime = 0;
     info.stid++;
-    info.stoptime += old.travelTimes[i];
-    info.starttime = info.stoptime + old.stopoverTimes[i];
+    info.stoptime += (i?old.stopoverTimes[i-1]:0) + old.travelTimes[i];
+    info.starttime =
+        info.stoptime + (i < old.stationNum - 2 ? old.stopoverTimes[i] : 0);
     // <old.station, T> -> id
   }
   info.starttime = -1;
+  info.price = old.prices[old.stationNum - 2];
   seat.Insert(pair<StationT, TrainInfo>(old.stations[old.stationNum - 1], info),
               info);
   std::cout << "0\n";
 }
 void TrainManager::query_train(std::stringstream &in) {
   TrainT T;
-  std::string time;
-  in >> T >> time;
+  short time;
+  std::string type;
+  while (in >> type) {
+    switch (type[1]) {
+    case 'i':
+      in >> T;
+      break;
+    case 'd':
+      in >> type, time = calc_time(type);
+      break;
+    }
+  }
   int id;
   if (!(id = TrainID.find(T)))
     return std::cout << "-1\n", void();
+
   Train c;
   TrainFile.get_content(c, id);
+  if(time < c.saleDate[0] || time > c.saleDate[1])
+    return std::cout << "-1\n", void();
   int nid, price = 0;
+  // start-time
+  short offs = time, offs2;
+  clck clk(offs, c.startTime);
   // get seat
   Reinfo nowseat(c.seatNum, c.stationNum);
-  short offs, offs2;
-  c.Init_time(&offs, time);
-  clck clk(offs, c.startTime);
   if ((nid = release.find(id))) {
     ReFile.get_content(nowseat, nid + time_distance(c.saleDate[0], offs));
   }
   // begin output
   //<stations[i]> <ARRIVING_TIME> -> <LEAVING_TIME> <PRICE> <seat>
-  std::cout << T << " " << c.type << '\n';
-  for (int i = 0; i < c.stationNum - 1; ++i) {
+  std::cout << T << " " << c.type << '\n'
+  << c.stations[0] << " xx-xx xx:xx -> " 
+  << clk.to_string() << " 0 " << nowseat.seat[0] << '\n';
+  clk.add_forth(c.travelTimes[0]);
+  for (int i = 1; i < c.stationNum - 1; ++i) {
     std::cout << c.stations[i] << " "
-              << (i == 0 ? "xx-xx xx:xx" : clk.to_string()) << " ";
-    clk.forth(c.stopoverTimes[i]);
-    std::cout << "->" << clk.to_string() << " " << price << " "
+              << clk.to_string();
+    clk.add_forth(c.stopoverTimes[i-1]);
+    std::cout << " -> " << clk.to_string() << " " << c.prices[i-1] << " "
               << nowseat.seat[i] << '\n';
-    price += c.prices[i];
+    clk.add_forth(c.travelTimes[i]);
   }
   std::cout << c.stations[c.stationNum - 1] << " " << clk.to_string()
-            << " -> xx-xx xx:xx " << price << " x\n";
+            << " -> xx-xx xx:xx " << c.prices[c.stationNum-2] << " x\n";
 }
 
 bool cmp_cost(const TrainInfo &a, const TrainInfo &b) {
@@ -212,52 +238,69 @@ int TrainManager::get_seat(int index, int st, int ed) {
   Reinfo n;
   ReFile.get_content(n, index);
   int mn = n.seat[st];
-  for (int i = st + 1; i <= ed; ++i)
+  //std::cout << "index" << index << " " << st << " " << ed << std::endl;
+  for (int i = st; i < ed; ++i)
     mn = mn < n.seat[i] ? mn : n.seat[i];
+    //std::cout << n.seat[i] << " ";
+  //std::cout << std::endl;
   return mn;
 }
 void TrainManager::update_seat(int index, int st, int ed, int num) {
   Reinfo n;
   ReFile.get_content(n, index);
-  for (int i = st; i <= ed; ++i)
+  // if(index == 67) {
+  //   //std::cout << std::endl << "indexfirst" << index << ' ' << st << ' ' << ed << ' ' << num << '\n';
+  //   for (int i = st; i < ed; ++i)
+  //     std::cout << n.seat[i] << ' ';
+  //   std::cout << std::endl;
+  // }
+  for (int i = st; i < ed; ++i)
     n.seat[i] -= num;
   ReFile.modify_content(n, index);
+  ReFile.get_content(n, index);
+  // if(index == 67) {
+  //   std::cout << "indexsecond" << index << ' ' << st << ' ' << ed << '\n';
+  //   for (int i = st; i < ed; ++i)
+  //     std::cout << n.seat[i] << ' ';
+  //   std::cout << std::endl;
+  // }
 }
 /*
   time : time from the beginning (to modify the time)
   date : the date  (to minus the saledate)
+  id : seatid not trainid
 */
-void TrainManager::print(const TrainInfo &a, clck time, const short& date,
+void TrainManager::print(const TrainInfo &a, clck time, const short &date,
                          const StationT &sts, const StationT &eds) {
-
+  
   std::cout << a.name << " " << sts << " "
-            << time.add_forth(a.starttime).to_string() << "->" << eds << " "
-            << a.price << " "
+            << time.add_forth(a.starttime).to_string() << " -> " << eds << " "
             << time.add_forth(a.stoptime - a.starttime).to_string() << " "
+            << a.price << " "
             << get_seat(a.id + time_distance(a.saleDate0, date), a.stid, a.edid)
             << std::endl;
 }
 void TrainManager::query_ticket(std::stringstream &in) {
   StationT sts, eds;
   std::string type, choice = "time";
-  in >> type;
   clck time;
-  switch (type[1]) {
-  case 's':
-    in >> sts;
-    break;
-  case 't':
-    in >> eds;
-    break;
-  case 'd':
-    in >> time.tim;
-    break;
-  case 'p':
-    in >> choice;
-    break;
-  default:
-    break;
-  }
+  while (in >> type)
+    switch (type[1]) {
+    case 's':
+      in >> sts;
+      break;
+    case 't':
+      in >> eds;
+      break;
+    case 'd':
+      in >> type, time.tim = calc_time(type);
+      break;
+    case 'p':
+      in >> choice;
+      break;
+    default:
+      break;
+    }
 
   sjtu::vector<TrainInfo> st, ed, res;
   seat.GetValue(sts, &st), seat.GetValue(eds, &ed);
@@ -273,11 +316,11 @@ void TrainManager::query_ticket(std::stringstream &in) {
     // the first day this train start : st[i].st
     // not in the saledate interval?
     if (st[i].id == ed[j].id && ~st[i].starttime && ~ed[j].stoptime &&
-        (tmp = find_release(st[i].id)) != -1 &&
+        (tmp = find_release(st[i].id)) &&
         tmp_startdate >= st[i].saleDate0 && tmp_startdate <= st[i].saleDate1)
       res.push_back({st[i].name, st[i].saleDate0, st[i].saleDate1, st[i].st,
                      st[i].stid, ed[j].stid, ed[j].price - st[i].price,
-                     st[i].starttime, ed[j].stoptime, tmp});
+                      ed[j].stoptime, st[i].starttime, tmp});
     ++i;
   }
   std::cout << res.size() << '\n';
@@ -290,7 +333,7 @@ void TrainManager::query_ticket(std::stringstream &in) {
   auto sort = [&](auto self, int l, int r,
                   bool (*cmp)(const TrainInfo &, const TrainInfo &)) {
     // quicksort
-    if (l == r)
+    if (l > r)
       return;
     int val = l + rand() % (r - l + 1);
     int *low = xb + l, *high = xb + r;
@@ -301,17 +344,21 @@ void TrainManager::query_ticket(std::stringstream &in) {
         ++low;
       std::swap(*low, *high);
     }
-    self(self, l, low - xb, cmp), self(self, low - xb + 1, r, cmp);
+    self(self, l, low - xb - 1, cmp), self(self, low - xb + 1, r, cmp);
   };
   if (choice == "cost")
     sort(sort, 0, res.size() - 1, cmp_cost);
   else
     sort(sort, 0, res.size() - 1, cmp_time);
 
+    // id 不匹配
   for (int i = 0; i < res.size(); ++i) {
+    //std::cout << time.tim << " " << res[xb[i]].starttime + res[xb[i]].st.hm << std::endl;
+    res[xb[i]].st.tim = time.back(res[xb[i]].starttime + res[xb[i]].st.hm);
+    //std::cout << res[xb[i]].st.tim << " " << res[xb[i]].id << " " << res[xb[i]].saleDate0 << std::endl;
     // time  bug..
-    print(res[xb[i]], res[xb[i]].st,
-          time.back(st[i].starttime + st[i].st.hm), sts, eds);
+    print(res[xb[i]], res[xb[i]].st, res[xb[i]].st.tim,
+          sts, eds);
   }
   delete[] xb;
 }
@@ -319,28 +366,23 @@ void TrainManager::query_ticket(std::stringstream &in) {
 void TrainManager::query_transfer(std::stringstream &in) {
   StationT sts, eds;
   std::string type, choice = "time";
-  in >> type;
   clck time;
-  switch (type[1]) {
-  case 's':
-    in >> sts;
-    break;
-  case 't':
-    in >> eds;
-    break;
-  case 'd':
-    in >> time.tim;
-    break;
-  case 'p':
-    in >> choice;
-    break;
-  default:
-    break;
-  }
+  while(in >> type)
+    switch (type[1]) {
+    case 's':
+      in >> sts; break;
+    case 't':
+      in >> eds; break;
+    case 'd':
+      in >> type, time.tim = calc_time(type); break;
+    case 'p':
+      in >> choice; break;
+    default: break;
+    }
   sjtu::vector<TrainInfo> st, ed;
   seat.GetValue(sts, &st), seat.GetValue(eds, &ed);
   // nead to get the real train
-  bool tp = type == "time"?0:1;
+  bool tp = type == "time" ? 0 : 1;
   if (st.empty() || ed.empty()) {
     std::cout << "0\n";
     return;
@@ -349,20 +391,25 @@ void TrainManager::query_transfer(std::stringstream &in) {
   Train *trs = new Train[st.size()], *trt = new Train[ed.size()];
   int *vals = new int[st.size()], *valt = new int[ed.size()], tmpdate;
   for (int i = 0; i < st.size(); ++i)
-    if ((tmpdate = time.back(st[i].starttime + st[i].st.hm)) <= st[i].saleDate1 && tmpdate >= st[i].saleDate0 
-       && (vals[i] = find_release(st[i].id)))
+    if ((tmpdate = time.back(st[i].starttime + (st[i].st.hm))) <=
+            st[i].saleDate1 &&
+        tmpdate >= st[i].saleDate0 && (vals[i] = find_release(st[i].id)))
       TrainFile.get_content(trs[i], st[i].id);
-    else vals[i] = 0;
+    else
+      vals[i] = 0;
   for (int i = 0; i < ed.size(); ++i)
     if ((valt[i] = find_release(ed[i].id)))
       TrainFile.get_content(trt[i], ed[i].id);
-    else valt[i] = 0;
+    else
+      valt[i] = 0;
   // store a temp : time cost
   TrainInfo ans1, ans2, tmp1, tmp2;
   bool first = 0;
   auto cmp = [&](const bool &type, const TrainInfo &a, const TrainInfo &b,
-                 const TrainInfo &c, const TrainInfo &d, const int &inva, const int &invb) {
-    if(!first) return true;
+                 const TrainInfo &c, const TrainInfo &d, const int &inva,
+                 const int &invb) {
+    if (!first)
+      return true;
     if (type) {
       if (a.price + b.price != c.price + d.price)
         return a.price + b.price < c.price + d.price;
@@ -372,7 +419,7 @@ void TrainManager::query_transfer(std::stringstream &in) {
         return inva < invb;
       return a.price + b.price < c.price + d.price;
     }
-    if(a.name != c.name)
+    if (a.name != c.name)
       return a.name < c.name;
     return b.name < d.name;
   };
@@ -385,40 +432,42 @@ void TrainManager::query_transfer(std::stringstream &in) {
     // train      trs[i] trt[j]
     // problem : hard to calc the del time
     int stt = 0, edt;
-    for(int i = st[xb1].stid + 1; i < trs[xb1].stationNum; ++i) {
-      stt += trs[xb1].travelTimes[i-1] ;
+    for (int i = st[xb1].stid + 1; i < trs[xb1].stationNum; ++i) {
+      stt += trs[xb1].travelTimes[i - 1];
       edt = 0;
-      for(int j = ed[xb2].stid-1; j >= 0; --j) {
+      for (int j = ed[xb2].stid - 1; j >= 0; --j) {
         edt += trt[xb2].travelTimes[j];
-        if(trs[xb1].stations[i] == trt[xb2].stations[j]) {
+        if (trs[xb1].stations[i] == trt[xb2].stations[j]) {
           // get the inva, invb
           TrainInfo sti = st[xb1], edj = ed[xb2];
-          // price time 
+          // price time
           sti.price = trs[xb1].prices[i] - trs[xb1].prices[st[xb1].stid];
           edj.price = trt[xb2].prices[ed[xb2].stid] - trt[xb2].prices[j];
           // st start -> st end -> ed start time -> end saledate
-           
           // min saledate
           clck tmped = {trt[xb2].saleDate[0], trt[xb2].startTime};
           tmped.add_forth(ed[xb2].starttime - edt);
-          // st:目前是第一站的结尾，稍后改成第一站的起点位置 同时start->stop也要改
+          // st:目前是第一站的结尾，稍后改成第一站的起点位置
+          // 同时start->stop也要改
           sti.st.add_forth(stt + sti.stoptime);
-          sti.st.tim = time.tim;       
-          if(sti.st.hm > tmped.hm)
+          sti.st.tim = time.tim;
+          if (sti.st.hm > tmped.hm)
             inva = 1440 - minute_distance(tmped.hm, sti.st.hm);
           sti.st.add_forth(inva);
-          if(sti.st.tim > trt[xb2].saleDate[1])
+          if (sti.st.tim > trt[xb2].saleDate[1])
             goto pdend;
           else {
-            if(sti.st.tim < trt[xb2].saleDate[0])
+            if (sti.st.tim < trt[xb2].saleDate[0])
               inva += int(trt[xb2].saleDate[0] - sti.st.tim) * 1440;
           }
-          if(cmp(tp, sti, edj, ans1, ans2, stt+edt+inva, invans)) {
-            ans1 = sti, ans2 = edj, invans = inva+stt+edt;
-            if(!first)first = 1;
+          if (cmp(tp, sti, edj, ans1, ans2, stt + edt + inva, invans)) {
+            ans1 = sti, ans2 = edj, invans = inva + stt + edt;
+            if (!first)
+              first = 1;
             mids = trs[xb1].stations[i];
             // move st back to normal
-            ans1.st = {time.back(st[xb1].st.hm + st[xb1].starttime), st[xb1].st.hm};
+            ans1.st = {time.back((st[xb1].st.hm) + st[xb1].starttime),
+                       st[xb1].st.hm};
             ans2.st = {sti.st.back(ed[xb2].stoptime - edt), ed[xb1].st.hm};
             // update time
             ans1.stoptime = ans1.starttime + stt;
@@ -428,10 +477,10 @@ void TrainManager::query_transfer(std::stringstream &in) {
             date1 = trs[xb1].saleDate[0], date2 = trs[xb2].saleDate[1];
           }
         }
-        pdend:;
-        edt += (j?trt[xb2].stopoverTimes[j-1]:0);
+      pdend:;
+        edt += (j ? trt[xb2].stopoverTimes[j - 1] : 0);
       }
-      stt += trs[xb1].stopoverTimes[i-1];
+      stt += trs[xb1].stopoverTimes[i - 1];
     }
   };
   for (int i = 0; i < st.size(); ++i)
@@ -440,11 +489,13 @@ void TrainManager::query_transfer(std::stringstream &in) {
         // halt for a long time ?
         if (vals[j])
           valid(i, j);
-          // for price earlier better
-          // for time earlier max(-d, saledatej0+starttime2)
+        // for price earlier better
+        // for time earlier max(-d, saledatej0+starttime2)
       }
-  if(!first) std::cout << "0\n";
+  if (!first)
+    std::cout << "0\n";
   else {
+    ans1.id = find_release(ans1.id), ans2.id = find_release(ans2.id);
     print(ans1, ans1.st, date1, sts, mids);
     print(ans2, ans2.st, date2, mids, eds);
   }

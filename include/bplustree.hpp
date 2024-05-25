@@ -57,10 +57,6 @@ struct RecycleList {
                               sizeof(page_id_t));
     }
   }
-  void remove() {
-    Recycle_filestream.close();
-    std::remove(recycle_file_name_.c_str());
-  }
   ~RecycleList() {
     // std::cerr << "write " << end_num_ << std::endl;
     Recycle_filestream.seekp(0);
@@ -84,13 +80,14 @@ public:
       db_io_.open(file_name_, std::ios::binary | std::ios::trunc |
                                   std::ios::out | std::ios::in);
     }
-
     dustbin.init(db_file);
   }
   void remove() {
     db_io_.close();
     std::remove(file_name_.c_str());
-    dustbin.remove();
+    dustbin.Recycle_filestream.close();
+    std::remove(dustbin.recycle_file_name_.c_str());
+    // std::cerr << "remove well" << std::endl;
   }
   ~DiskManager() { db_io_.close(); }
   /**
@@ -154,7 +151,8 @@ public:
 INDEX_TEMPLATE_ARGUMENTS
 class BPlusTree {
 #define INTERNAL_PAGE_SIZE                                                     \
-  ((Bustub_PAGE_SIZE - INTERNAL_PAGE_HEADER_SIZE) / (sizeof(MappingType)))
+  ((Bustub_PAGE_SIZE - INTERNAL_PAGE_HEADER_SIZE) /                            \
+   (sizeof(InternalMappingType)))
 #define B_PLUS_TREE_LEAF_PAGE_TYPE                                             \
   BPlusTreeLeafPage<KeyType, ValueType, KeyComparator>
 #define LEAF_PAGE_SIZE                                                         \
@@ -162,7 +160,6 @@ class BPlusTree {
   // *作为指针只在内存，在外存读写中不需要用到。
 #define MappingType pair<KeyType, ValueType>
 #define InternalMappingType pair<KeyType, page_id_t>
-
   struct BPlusTreeInternalPage : public BPlusTreePage {
   public:
     // Delete all constructor / destructor to ensure memory safety
@@ -183,7 +180,7 @@ class BPlusTree {
      * @return Key at index
      */
 
-    auto KeyAt(int index) const -> KeyType { return array_[index].first; }
+    auto KeyAt(int index)  -> KeyType { return array_[index].first; }
     /*
       return a pair first:pos, second: page_id_t
     */
@@ -216,7 +213,7 @@ class BPlusTree {
     /*
       指向第index个的子结点
     */
-    auto ValueAt(int index) const -> page_id_t { return array_[index].second; }
+    auto ValAt(int index) const -> page_id_t { return array_[index].second; }
     auto ToString() const -> std::string {
       std::string kstr = "(";
       bool first = true;
@@ -325,6 +322,7 @@ class BPlusTree {
     std::fstream root;
     std::string root_name;
     void init(std::string file_name, int *header_id) {
+      memset(pos, 0, sizeof(pos));
       this->disk.init(file_name);
       rt = header_id;
       root_name = file_name + "_root";
@@ -339,15 +337,15 @@ class BPlusTree {
       }
     }
     void remove() {
-      disk.remove();
       root.close();
       std::remove(root_name.c_str());
+      disk.remove();
     }
     void getpos(PtrHead *head) { head->pos = disk.dustbin.GetVacancy(); }
     void setpos(PtrHead *head, int pos_) { head->pos = pos_; }
 
     void WritePage(PtrHead *head, BPlusTreePage *content) {
-
+      int sz;
       IndexPageType ind = content->IsLeafPage() ? IndexPageType::LEAF_PAGE
                                                 : IndexPageType::INTERNAL_PAGE;
       if (ind == IndexPageType::LEAF_PAGE)
@@ -378,17 +376,7 @@ class BPlusTree {
     }
     // 区分在末尾析构，还是中途析构
     void del_content(int pos_, int tp = 0) {
-      // auto to_string = [&](BPlusTreePage *node) -> std::string {
-      //   if (node->IsLeafPage())
-      //     return static_cast<BPlusTreeLeafPage *>(node)->ToString();
-      //   else
-      //     return static_cast<BPlusTreeInternalPage *>(node)->ToString();
-      // };
-      // std::cerr << "del "
-      //             << pos_ << " " << tmp[pos_].head->pos << " "
-      //             << tmp[pos_].head->pin << " " <<
-      //             to_string(tmp[pos_].content) << tmp[pos_].head->count
-      //                                                      << std::endl;
+      // assert(tmp[pos_].head != nullptr);
       if (tmp[pos_].head->pin)
         WritePage(tmp[pos_].head, tmp[pos_].content);
       // bug!!!
@@ -399,6 +387,7 @@ class BPlusTree {
         delete static_cast<BPlusTreeLeafPage *>(tmp[pos_].content);
       else
         delete static_cast<BPlusTreeInternalPage *>(tmp[pos_].content);
+      // std::cerr << 233 << std::endl;
     }
 
     void get_content(page_id_t pos_, Ptr *pointer) {
@@ -443,12 +432,15 @@ class BPlusTree {
         add_content(sz++, pos_, pointer);
       }
     }
-
-    ~BufferPoolManager() {
+    void exit() {
+      // std::cerr << sz << " " << pos << std::endl;
       for (size_t i = 0; i < sz; ++i) {
         if (pos[i])
-          // assert(tmp[i].head->count == 1);
+          // std::cerr << "pos " << i << " " << sz << " " << (i < sz) << " " <<
+          // pos[i] << std::endl,
           del_content(i);
+        // std::cerr << "pos " << i << " " << sz << " " << (i < sz) << " " <<
+        // pos[i] << std::endl;
       }
       root.seekp(0);
       root.write(reinterpret_cast<const char *>(rt), sizeof(int));
@@ -532,11 +524,21 @@ public:
   BPlusTree(std::string disk_name)
       : leaf_max_size_(LEAF_PAGE_SIZE), internal_max_size_(INTERNAL_PAGE_SIZE) {
     // page_id manager?
+    // std::cerr << "size" << leaf_max_size_ << " " << std::endl;
     bpm.init(disk_name, &header_page_id_);
   }
+  void exit(bool tp = 0) {
+    if (tp) {
+      return remove();
+    }
+    if (~header_page_id_)
+      bpm.exit();
+  }
   void remove() {
+    header_page_id_ = -1;
     bpm.remove();
   }
+
   void Init(std::string disk_name) {
     leaf_max_size_ = LEAF_PAGE_SIZE, internal_max_size_ = INTERNAL_PAGE_SIZE;
     bpm.init(disk_name, &header_page_id_);
@@ -579,55 +581,37 @@ public:
     }
     // std::cerr << std::endl;
   }
-  // Insert a key-value pair into this B+ tree.
-  void SetKeyAt(BPlusTreePage *page, const KeyType &key, const ValueType &val,
-                int index) {
-    if (page->IsLeafPage())
-      static_cast<BPlusTreeLeafPage *>(page)->SetKeyAt(index, key, val);
+  BPlusTreeLeafPage *leaf(BPlusTreePage *page) {
+    return static_cast<BPlusTreeLeafPage *>(page);
+  }
+  BPlusTreeInternalPage *intern(BPlusTreePage *page) {
+    return static_cast<BPlusTreeInternalPage *>(page);
+  }
+  KeyType KeyAt(BPlusTreePage* page, const int& index) {
+    if(page->IsLeafPage())
+      return leaf(page)->KeyAt(index);
+    else 
+      return intern(page)->KeyAt(index);
+  }
+  void DelAt(BPlusTreePage* page, const int& index) {
+    if(page->IsLeafPage())
+      return leaf(page)->DelAt(index);
     else
-      static_cast<BPlusTreeInternalPage *>(page)->SetKeyAt(index, key, val);
+      return intern(page)->DelAt(index);
   }
-  KeyType KeyAt(BPlusTreePage *page, int index) {
-    if (page->IsLeafPage())
-      return static_cast<BPlusTreeLeafPage *>(page)->KeyAt(index);
-    return static_cast<BPlusTreeInternalPage *>(page)->KeyAt(index);
-  }
-  ValueType ValAt(BPlusTreePage *page, int index) {
-    if (page->IsLeafPage())
-      return static_cast<BPlusTreeLeafPage *>(page)->ValAt(index);
-    else
-      return static_cast<BPlusTreeInternalPage *>(page)->ValueAt(index);
-  }
-  void DelAt(BPlusTreePage *page, int index) {
-    if (page->IsLeafPage())
-      static_cast<BPlusTreeLeafPage *>(page)->DelAt(index);
-    else
-      static_cast<BPlusTreeInternalPage *>(page)->DelAt(index);
-  }
-  BPlusTreeLeafPage *weiling = nullptr;
   bool Insert(const KeyType &key, const ValueType &value) {
     sjtu::vector<Ptr> v;
     sjtu::vector<int> v1;
     FindPosVector(key, &v, &v1);
-    // std::cerr << "Insert " << key.second << " ";
-    //  for (auto i : v)
-    //    std::cerr << to_string(i.content) << "|";
-    //  std::cerr << std::endl;
-    /*
-      case 0
-      empty
-    */
     if (v.empty()) {
       BPlusTreeLeafPage *new_page = new BPlusTreeLeafPage;
       new_page->SetKeyAt(0, key, value);
       new_page->SetNextPageId(0);
-      weiling = new_page;
       Ptr pos(&bpm, new_page);
       pos.Dirty();
       header_page_id_ = pos.head->pos;
       return 1;
     }
-    // assert(v.back().head->count == 2);
     Ptr pos(v.back());
     BPlusTreeLeafPage *cont = static_cast<BPlusTreeLeafPage *>(pos.content);
     size_t index = cont->find(key, value);
@@ -655,8 +639,6 @@ public:
 
     new_page->SetNextPageId(cont->GetNextPageId());
     cont->SetNextPageId(new_pos.head->pos);
-    if (new_page->next_page_id_ == 0)
-      weiling = new_page;
     new_pos.Dirty(), pos.Dirty();
 
     // check if their father is full
@@ -690,7 +672,7 @@ public:
       BPlusTreeInternalPage *new_fa = new BPlusTreeInternalPage;
       for (int i = internal_max_size_ >> 1; i < internal_max_size_; ++i)
         new_fa->SetKeyAt(i - (internal_max_size_ >> 1), fa_cont->KeyAt(i),
-                         fa_cont->ValueAt(i));
+                         fa_cont->ValAt(i));
       fa->SetSize(internal_max_size_ >> 1);
       if (index < (internal_max_size_ >> 1)) {
         fa_cont->SetKeyAt(index, KeyAt(new1_page, 0), new_pos.head->pos);
@@ -700,9 +682,6 @@ public:
       }
       Ptr new_fa_page(&bpm, new_fa);
       fa.Dirty(), new_fa_page.Dirty();
-      // std::cerr << "fa " << to_string(fa.content) << std::endl;
-      // std::cerr << "new_fa " << to_string(new_fa) << std::endl;
-
       new_pos = new_fa_page, new1_page = new_fa;
       v.pop_back(), v1.pop_back();
       // last case: root needs to split
@@ -714,7 +693,6 @@ public:
         rt.Dirty();
         header_page_id_ = rt.head->pos;
         v.clear(), v1.clear();
-        FindPosVector(key, &v, &v1);
         return 1;
       }
     }
@@ -724,34 +702,56 @@ public:
   void update(Ptr &fa, BPlusTreePage *fa_cont, Ptr &pre,
               BPlusTreePage *pre_cont, Ptr &nxt, BPlusTreePage *nxt_cont,
               size_t index, int dx) {
-    if (dx > 0) {
-      // bro = pos_cont + 1 bro.first = pos_cont.last
-      auto res = MappingType{KeyAt(nxt_cont, 0), ValAt(nxt_cont, 0)};
-      SetKeyAt(pre_cont, res.first, res.second, pre_cont->GetSize());
-      DelAt(nxt_cont, 0);
+    if (pre_cont->IsLeafPage()) {
+      if (dx > 0) {
+        // bro = pos_cont + 1 bro.first = pos_cont.last
+        auto res = MappingType{leaf(nxt_cont)->KeyAt(0), leaf(nxt_cont)->ValAt(0) };
+        leaf(pre_cont)->SetKeyAt(pre_cont->GetSize(), res.first, res.second);
+        leaf(nxt_cont)->DelAt(0);
+      } else {
+        // pos_cont = bro + 1
+        auto res = MappingType{leaf(pre_cont)->KeyAt(pre_cont->GetSize() - 1),
+                               leaf(pre_cont)->ValAt(pre_cont->GetSize() - 1)};
+        leaf(nxt_cont)->SetKeyAt(0, res.first, res.second);
+        leaf(pre_cont)->DelAt(pre_cont->GetSize() - 1);
+      }
+      static_cast<BPlusTreeInternalPage *>(fa_cont)->ModKeyAt
+          (leaf(nxt_cont)->KeyAt(0), index + 1);
+      fa.Dirty(), pre.Dirty(), nxt.Dirty();
     } else {
-      // pos_cont = bro + 1
-      auto res = MappingType{KeyAt(pre_cont, pre_cont->GetSize() - 1),
-                             ValAt(pre_cont, pre_cont->GetSize() - 1)};
-      SetKeyAt(nxt_cont, res.first, res.second, 0);
-      DelAt(pre_cont, pre_cont->GetSize() - 1);
-    }
-    static_cast<BPlusTreeInternalPage *>(fa_cont)->ModKeyAt(KeyAt(nxt_cont, 0),
-                                                            index + 1);
-    fa.Dirty(), pre.Dirty(), nxt.Dirty();
+      if (dx > 0) {
+        // bro = pos_cont + 1 bro.first = pos_cont.last
+        auto res = InternalMappingType{intern(nxt_cont)->KeyAt(0), intern(nxt_cont)->ValAt(0) };
+        intern(pre_cont)->SetKeyAt(pre_cont->GetSize(), res.first, res.second);
+        intern(nxt_cont)->DelAt(0);
+      } else {
+        // pos_cont = bro + 1
+        auto res = InternalMappingType{intern(pre_cont)->KeyAt(pre_cont->GetSize() - 1),
+                               intern(pre_cont)->ValAt(pre_cont->GetSize() - 1)};
+        intern(nxt_cont)->SetKeyAt(0, res.first, res.second);
+        intern(pre_cont)->DelAt(pre_cont->GetSize() - 1);
+      }
+      static_cast<BPlusTreeInternalPage *>(fa_cont)->ModKeyAt
+          (intern(nxt_cont)->KeyAt(0), index + 1);
+      fa.Dirty(), pre.Dirty(), nxt.Dirty();
   }
+}
 
   void merge(Ptr &fa, BPlusTreePage *fa_cont, Ptr &pre, BPlusTreePage *pre_cont,
              Ptr &nxt, BPlusTreePage *nxt_cont, size_t index) {
     size_t offset = pre_cont->GetSize();
-    for (int i = 0; i < nxt_cont->GetSize(); ++i)
-      SetKeyAt(pre_cont, KeyAt(nxt_cont, i), ValAt(nxt_cont, i), offset + i);
+    if(nxt_cont->IsLeafPage()) {
+      for (int i = 0; i < nxt_cont->GetSize(); ++i)
+        leaf(pre_cont)->SetKeyAt(offset + i, KeyAt(nxt_cont, i), leaf(nxt_cont)->ValAt(i));
+    } else {
+      for (int i = 0; i < nxt_cont->GetSize(); ++i)
+        intern(nxt_cont)->SetKeyAt(offset + i, KeyAt(nxt_cont, i), intern(nxt_cont)->ValAt(i));  
+    }
+
     if (pre_cont->IsLeafPage())
       static_cast<BPlusTreeLeafPage *>(pre_cont)->SetNextPageId(
           static_cast<BPlusTreeLeafPage *>(nxt_cont)->GetNextPageId());
     // printtree(Ptr(&bpm, nullptr, header_page_id_));
-    if (nxt_cont == weiling)
-      weiling = static_cast<BPlusTreeLeafPage *>(pre_cont);
     pre.Dirty(), nxt.Dirty(), fa.Dirty();
     nxt_cont->SetSize(0);
   }
@@ -762,10 +762,8 @@ public:
     sjtu::vector<Ptr> v;
     sjtu::vector<int> v1;
     FindPosVector(key, &v, &v1);
-
     if (v.empty())
       return;
-
     Ptr pos = v.back();
     BPlusTreePage *cont = pos.content;
     size_t index =
@@ -802,9 +800,9 @@ public:
       int flag;
       Ptr bro;
       if (index1 + 1 < fa_cont->GetSize())
-        bro = Ptr(&bpm, nullptr, fa_cont->ValueAt(index1 + 1)), flag = 1;
+        bro = Ptr(&bpm, nullptr, fa_cont->ValAt(index1 + 1)), flag = 1;
       else
-        bro = Ptr(&bpm, nullptr, fa_cont->ValueAt(index1 - 1)), flag = -1;
+        bro = Ptr(&bpm, nullptr, fa_cont->ValAt(index1 - 1)), flag = -1;
       BPlusTreeInternalPage *bro_cont =
           static_cast<BPlusTreeInternalPage *>(bro.content);
       if (bro_cont->GetSize() > bro_cont->GetMinSize()) {
@@ -830,7 +828,7 @@ public:
     pos.Dirty();
     if (cont->GetSize() == 1 && !pos.content->IsLeafPage() &&
         pos.head->pos == header_page_id_) {
-      header_page_id_ = ValAt(pos.content, 0);
+      header_page_id_ = intern(pos.content)->ValAt(0);
       // std::cerr << "删掉父亲"  << std::endl;
       return;
     }
@@ -853,7 +851,7 @@ public:
     if (index % 2 == 0)
       assert(0);
     index >>= 1;
-    static_cast<BPlusTreeLeafPage *>(cont)->ModKeyAt( newkey, index);
+    static_cast<BPlusTreeLeafPage *>(cont)->ModKeyAt(newkey, index);
     pos.Dirty();
   }
   // Return the value associated with a given key
@@ -869,15 +867,20 @@ public:
       tmp = static_cast<BPlusTreeLeafPage *>(l.content);
     else
       return;
-    for (int i = 0; i < tmp->GetSize(); ++i)
-      if (tmp->KeyAt(i).second.id == val.id)
+    for (int i = 0; i < tmp->GetSize(); ++i) {
+      if (key < tmp->KeyAt(i).first)
+        break;
+      if (tmp->KeyAt(i).first == key && tmp->KeyAt(i).second.id == val.id) {
         val = tmp->ValAt(i);
+        return;
+      }
+    }
+    val.id = -1;
   }
   void GetValue(const GetType &key, sjtu::vector<ValueType> *result) {
     Ptr l = FindPos(KeyType{key, ValueType()});
     BPlusTreeLeafPage *tmp;
     int id = -1;
-    // printtree();
     while (
         l.content &&
         (tmp = static_cast<BPlusTreeLeafPage *>(l.content))->KeyAt(0).first <=
@@ -899,6 +902,7 @@ public:
 private:
   /* Debug Routines for FREE!! */
   // member variable
+  bool isR = 0;
   sjtu::string<20> index_name_;
   int leaf_max_size_;
   int internal_max_size_;
@@ -908,5 +912,4 @@ private:
 } // namespace Bptree
 // sjtu::vector<int> result;
 // Bptree::BPlusTree<pair<unsigned long long, int>, int> Bpt("disk");
-
 #endif

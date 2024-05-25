@@ -7,7 +7,7 @@
 
 struct Loginfo{
   TrainT name;
-  int trainid, saledate;
+  int trainid, saledate; // 
   StationT sts, eds;
   clck s, stt, edt; // 起始站s的时间：存在name->trainid中, 该站的开始、结束
   short stid, edid; // {trainid, s, id, price} 
@@ -21,12 +21,17 @@ struct Loginfo{
 
 struct ticketsystem {
   // <订单号, > - sta，id->订单号
-  FileManager<Loginfo> Flog;
-  // 
+  FileManager<Loginfo> Flog; 
+  // 车次 订单号<trainid logid> -> <logid>订单号
   Bptree::BPlusTree<pair<int, pair<int,int>>, pair<int,int>, int> ulog;
-  // 车次 订单号 -> 订单号
-  Bptree::BPlusTree<pair<int,int>, int, int> pnd;
-  void Init(char* file_name) {
+  
+  // -trainid < -Flog.id, -user.id >
+  Bptree::BPlusTree<pair<int, pair<int, int> >, pair<int, int>, int> pnd;
+  void exit(){
+    ulog.exit();
+    pnd.exit();
+  }
+  void Init(const char* file_name) {
     Flog.Init(file_name);
     ulog.Init("ulog");
     pnd.Init("pnd");
@@ -39,9 +44,9 @@ struct ticketsystem {
   // refund ticket: ulog remove, if(pnd.find) pnd remove ; 
   // get all trainid loginfo, check again if they are valid ?
   //
-  void buy_ticket(const int& uid, const Loginfo& info, const bool& type);
-  void query_order(std::stringstream& in);
-  sjtu::vector<int> refund_ticket(const int& uid, const int& id, int& tid);
+  void buy_ticket(const int& uid, Loginfo& info, const bool& type, const int&);
+  void query_order(const int& uid);
+  sjtu::vector<pair<int, int> > refund_ticket(const int& uid, const int& id, int& tid);
 };
 
 #endif
