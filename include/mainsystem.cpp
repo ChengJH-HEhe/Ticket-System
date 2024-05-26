@@ -195,8 +195,6 @@ bool mainsystem::init(std::stringstream &in) {
         trainSystem.query_ticket(in);
         break;
       case 5:{
-        if(tim == "[220896]")
-          std::cerr << 233 << '\n';
         trainSystem.query_transfer(in);
       }
         break;
