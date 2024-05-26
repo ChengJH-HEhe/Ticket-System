@@ -17,6 +17,7 @@ void mainsystem::buy_ticket(std::stringstream &in) {
   int uid;
   std::string type;
   Loginfo ins;
+  ins.type = 0;
   while (in >> type) {
     switch (type[1]) {
     case 'u':
@@ -54,13 +55,12 @@ void mainsystem::buy_ticket(std::stringstream &in) {
     std::cout << "-1" << std::endl;
     return;
   }
-
-  ins.trainid = id1;
   // we need to get the traininfo
   TrainInfo infos = trainSystem.get_TrainInfo(ins.sts, id1),
             infot = trainSystem.get_TrainInfo(ins.eds, id1);
-  if(infos.id == -1 || infot.id == -1) {
+  if(infos.id == -1 || infot.id == -1 || infos.stid > infot.stid) {
     std::cout << "-1" << std::endl;
+    return;
   }
   
   ins.stid = infos.stid, ins.edid = infot.stid; // station-id
@@ -71,18 +71,18 @@ void mainsystem::buy_ticket(std::stringstream &in) {
     std::cout << "-1" << std::endl;
     return;
   } // not in the interval
-  
   // time & saledate
   ins.s.hm = infos.st.hm;
   ins.stt = ins.s.forth(infos.starttime), ins.edt = ins.s.forth(infot.stoptime);
   ins.saledate = infos.saleDate0;
+  ins.seatid = id2 + time_distance(ins.saledate, ins.s.tim);
   // id2 + time_distance(should be correct)
-  if (trainSystem.check(id2 + time_distance(ins.saledate, ins.s.tim),
-                        ins.stid, ins.edid, ins.num))
-    ticketSystem.buy_ticket(uid, ins, 1, 1),
-        trainSystem.TM.update_seat(id2 + time_distance(ins.saledate, ins.s.tim), ins.stid, ins.edid, ins.num);
+  int res = trainSystem.check(ins.seatid,
+                        ins.stid, ins.edid, ins.num);
+  if (res < 0)
+    std::cout << "-1\n";
   else
-    ticketSystem.buy_ticket(uid, ins, 0, 1);
+    ticketSystem.buy_ticket(uid, ins, res);
 }
 void mainsystem::query_order(std::stringstream &in) {
   int uid;
@@ -105,7 +105,7 @@ void mainsystem::refund_ticket(std::stringstream &in) {
     case 'u':
       in >> username;
       break;
-    case 'i':
+    case 'n':
       in >> id;
       break;
     }
@@ -113,33 +113,30 @@ void mainsystem::refund_ticket(std::stringstream &in) {
   if (!(uid = userSystem.um.find_user(username, 1))) {
     return std::cout << "-1\n", void();
   }
-  int seatid, trainid;
+  int seatid;
   // LOGID userid
-  sjtu::vector< pair<int,int> > res1 = ticketSystem.refund_ticket(uid, id, trainid);
+  sjtu::vector< pair<int,int> > res1 = ticketSystem.refund_ticket(uid, id, seatid);
   if (res1.empty())
     return;
-  
-  seatid = trainSystem.TM.find_release(trainid);
   // update seat for res1.back()
   // update trainsystem 
   // succuss not tui
-  for (int i = int(res1.size()) - 1; i >= 0; --i) {
-    Loginfo ins;
+  Loginfo ins;
+  ticketSystem.Flog.get_content(ins, res1.back().first);
+  trainSystem.TM.update_seat(seatid, ins.stid, ins.edid, -ins.num);
+  for (int i = 0; i < int(res1.size()) - 1; ++i) {
     ticketSystem.Flog.get_content(ins, res1[i].first);
-    if(i == res1.size() - 1) {
-      trainSystem.TM.update_seat(seatid + time_distance(ins.saledate, ins.s.tim), 
-      ins.stid, ins.edid, -ins.num);
-    } else {
-      seatid = trainSystem.TM.find_release(ins.trainid);
-      if (trainSystem.check(seatid + time_distance(ins.saledate, ins.s.tim),
-                          ins.stid, ins.edid, ins.num)) {
-        trainSystem.TM.update_seat(seatid + time_distance(ins.saledate, ins.s.tim), ins.stid, ins.edid, -ins.num);
+      // queue -> success
+      //ins.output();
+      if (trainSystem.check(seatid,
+                          ins.stid, ins.edid, ins.num) > 0) {
       // ulog update : 0 -> 1
       // user[id] pnd. -> userid: 
-        ticketSystem.ulog.update({trainid, {res1[i].first, 0}},{trainid, {res1[i].first, 1}});
-        ticketSystem.pnd.Remove({trainid, res1[i]});
+        ticketSystem.ulog.update({res1[i].second, {res1[i].first, 0}},
+        {res1[i].second, {res1[i].first, 1}});
+        //ins.output();
+        ticketSystem.pnd.Remove({seatid, res1[i]});
       }
-    }
   }
 }
 void mainsystem::clean() {
@@ -154,8 +151,6 @@ bool mainsystem::init(std::stringstream &in) {
   in >> tim;
   std::string cmd;
   std::cout << tim << " ";
-  if(tim == "[8857]")
-    std::cerr << 233 << '\n';
   in >> cmd;
   for (int i = 0; i < 5; ++i) {
     if (users[i] == cmd) {
@@ -199,8 +194,11 @@ bool mainsystem::init(std::stringstream &in) {
       case 4:
         trainSystem.query_ticket(in);
         break;
-      case 5:
+      case 5:{
+        if(tim == "[220896]")
+          std::cerr << 233 << '\n';
         trainSystem.query_transfer(in);
+      }
         break;
       default:
         break;

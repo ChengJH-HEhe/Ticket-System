@@ -13,7 +13,7 @@ struct trainsystem{
   void delete_train(std::stringstream& in);
   void release_train(std::stringstream& in);
   TrainInfo get_TrainInfo(const StationT& str, const int& id);
-  bool check(const int&, const int&, const int&, const int&);
+  int check(const int&, const int&, const int&, const int&);
   void query_train(std::stringstream& in);
   void query_ticket(std::stringstream& in);
   void query_transfer(std::stringstream& in);

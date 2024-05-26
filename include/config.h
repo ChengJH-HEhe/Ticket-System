@@ -107,22 +107,23 @@ struct clck {
     return tmp.add_forth(add);
   }
   clck &add_forth(int add) {
-    short newm = hm % 60 + add;
+    int newm = hm % 60 + add;
     hm -= hm % 60;
     hm /= 60; // only hours
     hm += newm / 60, newm %= 60;
-    int lim[3] = {30, 31, 31};
-    short newh = hm / 24;
+    int lim[] = {30, 31, 31, 30, 31, 30, 31};
+    int newh = hm / 24;
     hm %= 24; hm *= 60; hm += newm;// back h & m
-    tim += newh; // most 3 days
-    if (tim % 100 > lim[tim / 100 - 6])
+    tim += newh; // 
+    // 2months?
+    while (tim % 100 > lim[tim / 100 - 6])
       tim = (tim / 100 + 1) * 100 + (tim % 100 - lim[tim / 100 - 6]);
     return *this;
   }
   // judge which day is the startdate
   short back(int del) {
     auto rem = del / 1440;
-    int lim[] = {31, 30, 31, 31};
+    int lim[] = {31, 30, 31, 31, 30, 31, 30, 31};
     short tim1 = tim;
     // rem 这么多天 801 - 1 - 100 + day[7] : 7/31
     while (rem >= tim1 % 100) {

@@ -58,13 +58,16 @@ struct RecycleList {
     }
   }
   ~RecycleList() {
-    // std::cerr << "write " << end_num_ << std::endl;
-    Recycle_filestream.seekp(0);
-    Recycle_filestream.write(reinterpret_cast<const char *>(&end_num_),
-                             sizeof(page_id_t));
-    Recycle_filestream.close();
+    if(end_num_ != -1) {
+      Recycle_filestream.seekp(0);
+      Recycle_filestream.write(reinterpret_cast<const char *>(&end_num_),
+                              sizeof(page_id_t));
+      Recycle_filestream.close();
+    }
   }
-  page_id_t GetVacancy() { return ++end_num_; }
+  page_id_t GetVacancy() { 
+    return ++end_num_; 
+  }
   void recycle(page_id_t pg) {}
 };
 class DiskManager {
@@ -85,6 +88,7 @@ public:
   void remove() {
     db_io_.close();
     std::remove(file_name_.c_str());
+    dustbin.end_num_ = -1;
     dustbin.Recycle_filestream.close();
     std::remove(dustbin.recycle_file_name_.c_str());
     // std::cerr << "remove well" << std::endl;
@@ -396,17 +400,9 @@ class BPlusTree {
       for (int i = 0; i < sz; ++i)
         if (pos_ == pos[i]) {
           *pointer = tmp[i];
-          // std::cout << "get content for " << pos_ << " " << tmp[i].content
-          //           << " " << tmp[i].head->count << std::endl;
           return;
         }
     notfound:;
-      // auto to_string = [&](BPlusTreePage *node) -> std::string {
-      //   if (node->IsLeafPage())
-      //     return static_cast<BPlusTreeLeafPage *>(node)->ToString();
-      //   else
-      //     return static_cast<BPlusTreeInternalPage *>(node)->ToString();
-      // };
       if (pointer->head == nullptr)
         pointer->head = new PtrHead(pos_, 0, 0);
       if (pos_ == -1) {
@@ -433,14 +429,10 @@ class BPlusTree {
       }
     }
     void exit() {
-      // std::cerr << sz << " " << pos << std::endl;
+      
       for (size_t i = 0; i < sz; ++i) {
         if (pos[i])
-          // std::cerr << "pos " << i << " " << sz << " " << (i < sz) << " " <<
-          // pos[i] << std::endl,
           del_content(i);
-        // std::cerr << "pos " << i << " " << sz << " " << (i < sz) << " " <<
-        // pos[i] << std::endl;
       }
       root.seekp(0);
       root.write(reinterpret_cast<const char *>(rt), sizeof(int));

@@ -66,14 +66,16 @@ struct Train{
 
 struct Reinfo{
   int seat[100]; 
-  Reinfo(int num = 0, int stop = 0) {
+  int num, stop;
+  Reinfo(int num_ = 0, int stop_ = 0) {
+    num = num_, stop = stop_;
     for(int i = 0; i < stop; ++i)
       seat[i] = num;
   }
 };
 struct TrainManager {
-  // id : begin ~ end no more than 60 copies from saledate; -id -d -> -Tid;
-  // query_train basic_info; ticket: seat[100] * 60 trains
+  // id : begin ~ end no more than 90 copies from saledate; -id -d -> -Tid;
+  // query_train basic_info; ticket: seat[100] * 90 trains
   void exit();
   Bptree::BPlusTree<pair<TrainT,int>, int, TrainT> TrainID;
   Bptree::BPlusTree<pair<int,int>, int, int> release;
@@ -86,9 +88,9 @@ struct TrainManager {
   void Init(std::string file_name) {
     TrainFile.Init(file_name + "_ID");
     ReFile.Init(file_name + "_Re");
+    seat.Init(file_name + "_seat");
     TrainID.Init(file_name + "_id");
     release.Init(file_name + "_release");
-    seat.Init(file_name + "_seat");
   }
   void remove() {
     TrainFile.remove();
@@ -102,7 +104,7 @@ struct TrainManager {
   int find_train(const TrainT&);
   int find_release(const int& id);
   int get_seat(int index, int st, int ed);
-  void update_seat(int index, int st, int ed, int num);
+  int update_seat(int index, int st, int ed, int num);
   void delete_train(std::stringstream& in);
   void release_train(std::stringstream& in);
   void query_train(std::stringstream& in);

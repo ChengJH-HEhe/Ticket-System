@@ -6,8 +6,8 @@ TrainInfo trainsystem::get_TrainInfo(const StationT& str, const int& id) {
   return TM.get_one_TrainInfo(str, id);
 }
 
-bool trainsystem::check(const int& id1, const int& stid, const int&edid, const int&num) {
-  return TM.get_seat(id1, stid, edid) >= num;
+int trainsystem::check(const int& id1, const int& stid, const int&edid, const int&num) {
+  return TM.update_seat(id1, stid, edid, num);
 }
 void trainsystem::add_train(std::stringstream& in) {
   TM.add_train(in);

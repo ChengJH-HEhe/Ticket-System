@@ -93,6 +93,7 @@ void Train::Init_int(int *idx, std::string &input) {
 void TrainManager::exit() {
   TrainID.exit();
   release.exit();
+  seat.exit();
 }
 
 int TrainManager::find_release(const int &id) {
@@ -144,6 +145,7 @@ void TrainManager::release_train(std::stringstream &in) {
   Train old;
   TrainFile.get_content(old, id);
   release.Insert(pair<int, int>(id, ReFile.Count), ReFile.Count);
+
   int tim = time_distance(old.saleDate[0], old.saleDate[1]) + 1;
   Reinfo *tmp = new Reinfo[tim];
   for (int i = 0; i < tim; ++i)
@@ -241,29 +243,21 @@ int TrainManager::get_seat(int index, int st, int ed) {
   //std::cout << "index" << index << " " << st << " " << ed << std::endl;
   for (int i = st; i < ed; ++i)
     mn = mn < n.seat[i] ? mn : n.seat[i];
-    //std::cout << n.seat[i] << " ";
-  //std::cout << std::endl;
   return mn;
 }
-void TrainManager::update_seat(int index, int st, int ed, int num) {
+int TrainManager::update_seat(int index, int st, int ed, int num) {
   Reinfo n;
   ReFile.get_content(n, index);
-  // if(index == 67) {
-  //   //std::cout << std::endl << "indexfirst" << index << ' ' << st << ' ' << ed << ' ' << num << '\n';
-  //   for (int i = st; i < ed; ++i)
-  //     std::cout << n.seat[i] << ' ';
-  //   std::cout << std::endl;
-  // }
+  if(num > n.num)
+    return -1 ;
+  if(num > 0)
+    for (int i = st; i < ed; ++i)
+      if(n.seat[i] < num)
+        return 0;
   for (int i = st; i < ed; ++i)
     n.seat[i] -= num;
   ReFile.modify_content(n, index);
-  ReFile.get_content(n, index);
-  // if(index == 67) {
-  //   std::cout << "indexsecond" << index << ' ' << st << ' ' << ed << '\n';
-  //   for (int i = st; i < ed; ++i)
-  //     std::cout << n.seat[i] << ' ';
-  //   std::cout << std::endl;
-  // }
+  return 1;
 }
 /*
   time : time from the beginning (to modify the time)
@@ -298,10 +292,11 @@ void TrainManager::query_ticket(std::stringstream &in) {
     case 'p':
       in >> choice;
       break;
-    default:
-      break;
     }
-
+  if(time.tim < 601) {
+    std::cout << "0\n";
+    return;
+  }
   sjtu::vector<TrainInfo> st, ed, res;
   seat.GetValue(sts, &st), seat.GetValue(eds, &ed);
   size_t i = 0, j = 0;
@@ -315,7 +310,7 @@ void TrainManager::query_ticket(std::stringstream &in) {
     // the day this train start : time.back(st[i].starttime+st[i].st.hm)
     // the first day this train start : st[i].st
     // not in the saledate interval?
-    if (st[i].id == ed[j].id && ~st[i].starttime && ~ed[j].stoptime &&
+    if (st[i].id == ed[j].id && st[i].starttime < ed[j].stoptime && ~st[i].starttime && ~ed[j].stoptime &&
         (tmp = find_release(st[i].id)) &&
         tmp_startdate >= st[i].saleDate0 && tmp_startdate <= st[i].saleDate1)
       res.push_back({st[i].name, st[i].saleDate0, st[i].saleDate1, st[i].st,
@@ -333,14 +328,14 @@ void TrainManager::query_ticket(std::stringstream &in) {
   auto sort = [&](auto self, int l, int r,
                   bool (*cmp)(const TrainInfo &, const TrainInfo &)) {
     // quicksort
-    if (l > r)
+    if (l >= r)
       return;
-    int val = l + rand() % (r - l + 1);
+    auto val = res[xb[l + rand() % (r - l + 1)]];
     int *low = xb + l, *high = xb + r;
     while (low < high) {
-      while (low < high && cmp(res[val], res[*high]))
+      while (low < high && cmp(val, res[*high]))
         --high;
-      while (low < high && cmp(res[*low], res[val]))
+      while (low < high && cmp(res[*low], val))
         ++low;
       std::swap(*low, *high);
     }
@@ -353,10 +348,7 @@ void TrainManager::query_ticket(std::stringstream &in) {
 
     // id 不匹配
   for (int i = 0; i < res.size(); ++i) {
-    //std::cout << time.tim << " " << res[xb[i]].starttime + res[xb[i]].st.hm << std::endl;
     res[xb[i]].st.tim = time.back(res[xb[i]].starttime + res[xb[i]].st.hm);
-    //std::cout << res[xb[i]].st.tim << " " << res[xb[i]].id << " " << res[xb[i]].saleDate0 << std::endl;
-    // time  bug..
     print(res[xb[i]], res[xb[i]].st, res[xb[i]].st.tim,
           sts, eds);
   }
@@ -366,6 +358,7 @@ void TrainManager::query_ticket(std::stringstream &in) {
 void TrainManager::query_transfer(std::stringstream &in) {
   StationT sts, eds;
   std::string type, choice = "time";
+  
   clck time;
   while(in >> type)
     switch (type[1]) {
@@ -379,19 +372,26 @@ void TrainManager::query_transfer(std::stringstream &in) {
       in >> choice; break;
     default: break;
     }
+  if(time.tim < 601) {
+    std::cout << "0\n";
+    return;
+  }
   sjtu::vector<TrainInfo> st, ed;
   seat.GetValue(sts, &st), seat.GetValue(eds, &ed);
   // nead to get the real train
-  bool tp = type == "time" ? 0 : 1;
+  bool tp = choice == "time" ? 0 : 1;
   if (st.empty() || ed.empty()) {
     std::cout << "0\n";
     return;
   }
   // all info is needed
   Train *trs = new Train[st.size()], *trt = new Train[ed.size()];
+  // tmpdate : st[i] start date
   int *vals = new int[st.size()], *valt = new int[ed.size()], tmpdate;
+  
+  // check start time 
   for (int i = 0; i < st.size(); ++i)
-    if ((tmpdate = time.back(st[i].starttime + (st[i].st.hm))) <=
+    if ((tmpdate = time.back(st[i].starttime + st[i].st.hm)) <=
             st[i].saleDate1 &&
         tmpdate >= st[i].saleDate0 && (vals[i] = find_release(st[i].id)))
       TrainFile.get_content(trs[i], st[i].id);
@@ -423,14 +423,19 @@ void TrainManager::query_transfer(std::stringstream &in) {
       return a.name < c.name;
     return b.name < d.name;
   };
-  int inva, invans = INT_MAX;
+  int inva = 0, invans = INT_MAX;
+  // mids name
   StationT mids;
-  short date1, date2;
+  // date1 date2
   auto valid = [&](const int &xb1, const int &xb2) {
     // check if ex a station is the same
     // traininfo: st[i]  ed[j]
     // train      trs[i] trt[j]
     // problem : hard to calc the del time
+    /*
+      station stid -> i 
+      price[stid] to stationid=stid+1
+    */ 
     int stt = 0, edt;
     for (int i = st[xb1].stid + 1; i < trs[xb1].stationNum; ++i) {
       stt += trs[xb1].travelTimes[i - 1];
@@ -438,43 +443,54 @@ void TrainManager::query_transfer(std::stringstream &in) {
       for (int j = ed[xb2].stid - 1; j >= 0; --j) {
         edt += trt[xb2].travelTimes[j];
         if (trs[xb1].stations[i] == trt[xb2].stations[j]) {
-          // get the inva, invb
+          /*
+            id = trainid
+            get the inva, invb
+          */ 
+          inva = 0;
           TrainInfo sti = st[xb1], edj = ed[xb2];
-          // price time
-          sti.price = trs[xb1].prices[i] - trs[xb1].prices[st[xb1].stid];
-          edj.price = trt[xb2].prices[ed[xb2].stid] - trt[xb2].prices[j];
+          sti.price = trs[xb1].prices[i - 1] - (st[xb1].stid?trs[xb1].prices[st[xb1].stid-1]:0);
+          edj.price = trt[xb2].prices[ed[xb2].stid - 1] - (j?trt[xb2].prices[j - 1]:0);
           // st start -> st end -> ed start time -> end saledate
-          // min saledate
+          // tmped.hm 是第二站的起始时刻
           clck tmped = {trt[xb2].saleDate[0], trt[xb2].startTime};
-          tmped.add_forth(ed[xb2].starttime - edt);
-          // st:目前是第一站的结尾，稍后改成第一站的起点位置
-          // 同时start->stop也要改
-          sti.st.add_forth(stt + sti.stoptime);
+          tmped.add_forth(ed[xb2].stoptime - edt);
+          // sti.st:第一辆车的结束时刻 st.hm 第一辆车的发车时刻
+          // 从起点发车 先计算时刻，然后再取时间为现在
+          sti.st.tim = 601;
+          sti.st.add_forth(sti.starttime);
           sti.st.tim = time.tim;
-          if (sti.st.hm > tmped.hm)
-            inva = 1440 - minute_distance(tmped.hm, sti.st.hm);
-          sti.st.add_forth(inva);
-          if (sti.st.tim > trt[xb2].saleDate[1])
+          sti.st.add_forth(stt);
+          // 到站时刻 st.tim st.hm 时刻的一二站间隙
+          // 判断此时是否已经开票 但注意此时的日期差距 第二班车起始的 tmped 的日期
+          int delta = (sti.st.hm > tmped.hm)? 1440 - minute_distance(tmped.hm, sti.st.hm) 
+            : minute_distance(sti.st.hm, tmped.hm);
+          inva += delta, sti.st.add_forth(delta);
+          if (sti.st.tim > tmped.forth(1440*(int)time_distance(trt[xb2].saleDate[0], trt[xb2].saleDate[1])).tim)
             goto pdend;
-          else {
-            if (sti.st.tim < trt[xb2].saleDate[0])
-              inva += int(trt[xb2].saleDate[0] - sti.st.tim) * 1440;
+          if (sti.st.tim < tmped.tim) {
+            int tmp = time_distance(sti.st.tim, tmped.tim); 
+            inva += tmp * 1440, sti.st.add_forth(tmp * 1440);
           }
+
+          // sti.st 走到第二辆车的第一站发车
+          // inva已经是第一站结束到第二站发车的时间距离了
+          // sti.st 是第二站的出发时间
           if (cmp(tp, sti, edj, ans1, ans2, stt + edt + inva, invans)) {
             ans1 = sti, ans2 = edj, invans = inva + stt + edt;
             if (!first)
               first = 1;
             mids = trs[xb1].stations[i];
-            // move st back to normal
-            ans1.st = {time.back((st[xb1].st.hm) + st[xb1].starttime),
+            // 第一辆车的发车日期 + 时刻
+            ans1.st = {time.back(st[xb1].st.hm + st[xb1].starttime),
                        st[xb1].st.hm};
-            ans2.st = {sti.st.back(ed[xb2].stoptime - edt), ed[xb1].st.hm};
+            // 当前车次
+            ans2.st = {sti.st.back(ed[xb2].stoptime - edt + ed[xb2].st.hm), ed[xb2].st.hm};
             // update time
             ans1.stoptime = ans1.starttime + stt;
             ans2.starttime = ans2.stoptime - edt;
             // update stationid
-            ans1.edid = i, ans2.stid = j;
-            date1 = trs[xb1].saleDate[0], date2 = trs[xb2].saleDate[1];
+            ans1.edid = i, ans2.edid = ans2.stid, ans2.stid = j;
           }
         }
       pdend:;
@@ -487,16 +503,14 @@ void TrainManager::query_transfer(std::stringstream &in) {
     if (vals[i])
       for (int j = 0; j < ed.size(); ++j) {
         // halt for a long time ?
-        if (vals[j])
+        if (valt[j] && st[i].id != ed[j].id)
           valid(i, j);
-        // for price earlier better
-        // for time earlier max(-d, saledatej0+starttime2)
       }
   if (!first)
     std::cout << "0\n";
   else {
     ans1.id = find_release(ans1.id), ans2.id = find_release(ans2.id);
-    print(ans1, ans1.st, date1, sts, mids);
-    print(ans2, ans2.st, date2, mids, eds);
+    print(ans1, ans1.st, ans1.st.tim, sts, mids);
+    print(ans2, ans2.st, ans2.st.tim, mids, eds);
   }
 }

@@ -88,7 +88,9 @@ std::string UserManager::Query_profile(User& CurUser, User& NewUser, int& Nid, c
   if(!Cid) return "-1";
   Cid = CurUser.type;
   Nid = direct_find_user(username, NewUser, 0);
-  if(Nid > 0 && NewUser.type <= Cid) 
+  if(cur_username == username)
+    return "";
+  if(Nid > 0 && NewUser.type < Cid) 
     return NewUser.profile();
   else return "-1";
 }
@@ -101,7 +103,7 @@ std::string UserManager::modify_profile(const UserNameT &cur_username, const Use
   if(Query_profile(CurUser, NewUser, NewId, cur_username, username) == "-1")
     return "-1";
   if(type >= 0){
-    if(CurUser.type < type) return "-1";
+    if(CurUser.type <= type) return "-1";
     NewUser.type = type;
   } 
   if(!name.empty()) {

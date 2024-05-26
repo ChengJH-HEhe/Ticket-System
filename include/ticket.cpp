@@ -7,21 +7,26 @@
 
 // pnd check -trainid all pnding
 
-void ticketsystem::buy_ticket(const int& uid, Loginfo& info, const bool& type, const int& outp = 1) {
-  ++Flog.Count;
+void Loginfo::output() {
+  std::cout << name << ' ' 
+    << sts << ' ' << stt.to_string() << " -> " << eds << ' ' << edt.to_string() << ' '
+    << price << ' ' << num << std::endl;
+}
+
+void ticketsystem::buy_ticket(const int& uid, Loginfo& info, const bool& type) {
   if(!type && !info.type) {
-      if(outp)
-        std::cout << "-1\n";
-      return;
+    std::cout << "-1\n";
+    return;
   }
+  ++Flog.Count;
   ulog.Insert(pair<int,pair<int,int>>(uid, pair<int,int>(Flog.Count, type)), 
     pair<int,int>(Flog.Count, type));
   Flog.modify_content(info, Flog.Count);
   if(!type) {
-    if(outp)std::cout << "queue\n";
-    pnd.Insert({info.trainid, {Flog.Count, uid}}, {Flog.Count, uid});
+    std::cout << "queue\n";
+    pnd.Insert({info.seatid, {Flog.Count, uid}}, {Flog.Count, uid});
   } else {
-    if(outp)std::cout << info.num * info.price << '\n';
+    std::cout << info.num * info.price << '\n';
   }
 }
 void ticketsystem::query_order(const int &uid) {
@@ -38,13 +43,11 @@ void ticketsystem::query_order(const int &uid) {
       case 0: std::cout << "[pending] ";break;
       case -1: std::cout << "[refunded] ";break;
     }
-    std::cout << info.name << ' ' 
-    << info.sts << ' ' << info.stt.to_string() << " -> " << info.eds << ' ' << info.edt.to_string() << ' '
-    << info.price << ' ' << info.num << '\n';
+    info.output();
   }
 }
 // ulog -> uid id-th ticket, trainid -> tid
-sjtu::vector<pair<int, int>> ticketsystem::refund_ticket(const int& uid,const int& id, int& tid) {
+sjtu::vector<pair<int, int>> ticketsystem::refund_ticket(const int& uid,const int& id, int& sid) {
   // get uid, Logid
   sjtu::vector< pair<int, int> > res;
   // Trainid -> Logid uid
@@ -64,9 +67,9 @@ sjtu::vector<pair<int, int>> ticketsystem::refund_ticket(const int& uid,const in
       // get trainid
       Loginfo info;
       Flog.get_content(info, wait.first);
-      tid = info.trainid;
+      sid = info.seatid;
       //
-      pnd.Remove({info.trainid, {wait.first, uid}});
+      pnd.Remove({info.seatid, {wait.first, uid}});
     };break;
     case 1: {
       // success -> refunded
@@ -74,9 +77,9 @@ sjtu::vector<pair<int, int>> ticketsystem::refund_ticket(const int& uid,const in
       Loginfo info;
       // get vector<>
       Flog.get_content(info, wait.first);
-      tid = info.trainid;
-      pnd.Remove({info.trainid, {wait.first, uid}});
-      pnd.GetValue(info.trainid, &res1);
+      sid = info.seatid;
+      pnd.Remove({info.seatid, {wait.first, uid}});
+      pnd.GetValue(info.seatid, &res1);
       res1.push_back({wait.first, uid});
       // update seat?
     };break;
