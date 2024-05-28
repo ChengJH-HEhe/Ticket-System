@@ -6,6 +6,8 @@
 #include <string.h>
 namespace sjtu {
 
+const int base = 257;
+
 template<int len = 65>
 struct string {
   char s[len + 1];
@@ -15,6 +17,12 @@ struct string {
     for (int i = 0; s[i]; ++i)
       tmp.push_back(s[i]);
     return tmp;
+  }
+  unsigned int hsh() const {
+    unsigned int res = 0;
+    for(int i = 0; s[i]; ++i)
+      res = res * 257 + s[i];
+    return res;
   }
   void Init(const std::string& rhs) {
     for(int i = 0; i < rhs.size(); ++i)
@@ -38,7 +46,6 @@ struct string {
     s[sizeof(s) - 1] = '\0';
     return *this;
   }
-
   string &operator+=(const string &other) {
     strncat(s, other.s, sizeof(s) - strlen(s) - 1);
     s[sizeof(s) - 1] = '\0';

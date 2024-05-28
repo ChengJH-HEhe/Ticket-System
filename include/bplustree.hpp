@@ -30,7 +30,7 @@ namespace Bptree {
 #define LEAF_PAGE_HEADER_SIZE 24
 
 #define INDEX_TEMPLATE_ARGUMENTS                                               \
-  template <typename KeyType, typename ValueType, typename GetType>
+  template <typename KeyType, typename ValueType, typename GetType, int bpmSize = 400>
 
 // define page type enum
 enum class IndexPageType { INVALID_INDEX_PAGE = 0, LEAF_PAGE, INTERNAL_PAGE };
@@ -314,8 +314,8 @@ class BPlusTree {
     PtrHead(int a, int b, int c) : pos(a), count(b), pin(c) {}
   };
   struct Ptr;
+  template<int MaxSize>
   struct BufferPoolManager {
-#define MaxSize 40
     DiskManager disk;
     size_t sz = 0;
     int pos[MaxSize], *rt;
@@ -443,10 +443,10 @@ class BPlusTree {
   struct Ptr {
     BPlusTreePage *content = nullptr;
     PtrHead *head = nullptr;
-    BufferPoolManager *bpm = nullptr;
+    BufferPoolManager<bpmSize> *bpm = nullptr;
     Ptr() = default;
     void getpos() { bpm->getpos(head); }
-    Ptr(BufferPoolManager *bpm_, BPlusTreePage *cont = nullptr, int pos_ = -1) {
+    Ptr(BufferPoolManager<bpmSize> *bpm_, BPlusTreePage *cont = nullptr, int pos_ = -1) {
       if (pos_) {
         bpm = bpm_;
         content = cont;
@@ -855,7 +855,7 @@ public:
     if (l.content)
       tmp = static_cast<BPlusTreeLeafPage *>(l.content);
     else
-      return;
+      return val.id = -1, void();
     for (int i = 0; i < tmp->GetSize(); ++i) {
       if (key < tmp->KeyAt(i).first)
         break;
@@ -885,7 +885,7 @@ public:
   }
   // Return the page id of the root node
   page_id_t GetRootPageId() { return header_page_id_; }
-  BufferPoolManager bpm;
+  BufferPoolManager<bpmSize> bpm;
   void debug() {}
 
 private:

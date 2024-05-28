@@ -9,7 +9,7 @@ TrainInfo TrainManager::get_one_TrainInfo(const StationT &name, const int &id) {
   // get the traininfo of the station
   TrainInfo res;
   res.id = id;
-  seat.GetUniqueValue(name, res); // get unique value
+  seat.GetUniqueValue(name.hsh(), res); // get unique value
   return res;
 }
 
@@ -161,7 +161,7 @@ void TrainManager::release_train(std::stringstream &in) {
   for (int i = 0; i < old.stationNum - 1; ++i) {
     //  std::cout << "Insert " << old.stations[i] << " " << info.stid << " " <<
     //  info.price << " " << info.id << " " << info.starttime << std::endl;
-    seat.Insert(pair<StationT, TrainInfo>(old.stations[i], info), info);
+    seat.Insert(pair<unsigned int, TrainInfo>(old.stations[i].hsh(), info), info);
     info.price = old.prices[i];
     if (!i)
       info.stoptime = 0;
@@ -174,7 +174,7 @@ void TrainManager::release_train(std::stringstream &in) {
   
   info.starttime = -1;
   info.price = old.prices[old.stationNum - 2];
-  seat.Insert(pair<StationT, TrainInfo>(old.stations[old.stationNum - 1], info),
+  seat.Insert(pair<unsigned int, TrainInfo>(old.stations[old.stationNum - 1].hsh(), info),
               info);
   std::cout << "0\n";
 }
@@ -300,7 +300,7 @@ void TrainManager::query_ticket(std::stringstream &in) {
     return;
   }
   sjtu::vector<TrainInfo> st, ed, res;
-  seat.GetValue(sts, &st), seat.GetValue(eds, &ed);
+  seat.GetValue(sts.hsh(), &st), seat.GetValue(eds.hsh(), &ed);
   size_t i = 0, j = 0;
   while (i < st.size() && j < ed.size()) {
     while (j < ed.size() && ed[j].id < st[i].id)
@@ -378,7 +378,7 @@ void TrainManager::query_transfer(std::stringstream &in) {
     return;
   }
   sjtu::vector<TrainInfo> st, ed;
-  seat.GetValue(sts, &st), seat.GetValue(eds, &ed);
+  seat.GetValue(sts.hsh(), &st), seat.GetValue(eds.hsh(), &ed);
   // nead to get the real train
   bool tp = choice == "time" ? 0 : 1;
   if (st.empty() || ed.empty()) {
@@ -387,11 +387,9 @@ void TrainManager::query_transfer(std::stringstream &in) {
   }
   // all info is needed
   int tmpdate;
-  Train *trs = new Train , *trt = new Train[ed.size()];
+  Train *trs = new Train;
   // tmpdate : st[i] start date
   // check start time 
-  for (int i = 0; i < ed.size(); ++i)
-      TrainFile.get_content(trt[i], ed[i].id);
   // store a temp : time cost
   TrainInfo ans1, ans2, tmp1, tmp2;
   bool first = 0;
@@ -420,31 +418,30 @@ void TrainManager::query_transfer(std::stringstream &in) {
   auto valid = [&](const int &xb1, const int &xb2) {
     // check if ex a station is the same
     // traininfo: st[i]  ed[j]
-    // train      trs[i] trt[j]
-    // problem : hard to calc the del time
+    // train      trs[i] ?
     /*
       station stid -> i 
       price[stid] to stationid=stid+1
     */ 
-    int stt = 0, edt;
+    int stt = 0;
     for (int i = st[xb1].stid + 1; i < trs->stationNum; ++i) {
       stt += trs->travelTimes[i - 1];
-      edt = 0;
-      for (int j = ed[xb2].stid - 1; j >= 0; --j) {
-        edt += trt[xb2].travelTimes[j];
-        if (trs->stations[i] == trt[xb2].stations[j]) {
+      {
+        TrainInfo edi = get_one_TrainInfo(trs->stations[i], ed[xb2].id);
+        if (edi.id != -1 && edi.stid < ed[xb2].stid) {
           /*
             id = trainid
             get the inva, invb
           */ 
           inva = 0;
           TrainInfo sti = st[xb1], edj = ed[xb2];
+          int edt = ed[xb2].stoptime - edi.starttime;
           sti.price = trs->prices[i - 1] - (st[xb1].stid?trs->prices[st[xb1].stid-1]:0);
-          edj.price = trt[xb2].prices[ed[xb2].stid - 1] - (j?trt[xb2].prices[j - 1]:0);
+          edj.price -= edi.price;
           // st start -> st end -> ed start time -> end saledate
           // tmped.hm 是第二站的起始时刻
-          clck tmped = {trt[xb2].saleDate[0], trt[xb2].startTime};
-          tmped.add_forth(ed[xb2].stoptime - edt);
+          clck tmped = {edj.saleDate0, ed[xb2].st.hm};
+          tmped.add_forth(edi.starttime);
           // sti.st:第一辆车的结束时刻 st.hm 第一辆车的发车时刻
           // 从起点发车 先计算时刻，然后再取时间为现在
           sti.st.tim = 601;
@@ -456,7 +453,7 @@ void TrainManager::query_transfer(std::stringstream &in) {
           int delta = (sti.st.hm > tmped.hm)? 1440 - minute_distance(tmped.hm, sti.st.hm) 
             : minute_distance(sti.st.hm, tmped.hm);
           inva += delta, sti.st.add_forth(delta);
-          if (sti.st.tim > tmped.forth(1440*(int)time_distance(trt[xb2].saleDate[0], trt[xb2].saleDate[1])).tim)
+          if (sti.st.tim > tmped.forth(1440*(int)time_distance(edj.saleDate0, edj.saleDate1)).tim)
             goto pdend;
           if (sti.st.tim < tmped.tim) {
             int tmp = time_distance(sti.st.tim, tmped.tim); 
@@ -479,11 +476,10 @@ void TrainManager::query_transfer(std::stringstream &in) {
             ans1.stoptime = ans1.starttime + stt;
             ans2.starttime = ans2.stoptime - edt;
             // update stationid
-            ans1.edid = i, ans2.edid = ans2.stid, ans2.stid = j;
+            ans1.edid = i, ans2.edid = ans2.stid, ans2.stid = edi.stid;
           }
         }
       pdend:;
-        edt += (j ? trt[xb2].stopoverTimes[j - 1] : 0);
       }
       stt += trs->stopoverTimes[i - 1];
     }
@@ -500,7 +496,7 @@ void TrainManager::query_transfer(std::stringstream &in) {
       }
     }
   // delete 
-  delete trs, delete  []trt;
+  delete trs;
   if (!first)
     std::cout << "0\n";
   else {
