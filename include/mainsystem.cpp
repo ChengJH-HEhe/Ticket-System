@@ -197,8 +197,6 @@ bool mainsystem::init(std::stringstream &in) {
         trainSystem.query_transfer(in);
       }
         break;
-      default:
-        break;
       }
       return 1;
     }

@@ -152,8 +152,9 @@ void TrainManager::release_train(std::stringstream &in) {
     tmp[i] = Reinfo(old.seatNum, old.stationNum);
   ReFile.modify_array(tmp, tim, ReFile.Count);
   ReFile.Count += tim;
-  // second part update all stations;
+  delete []tmp;
 
+  // second part update all stations;
   TrainInfo info(r, old.saleDate[0], old.saleDate[1], clck(0, old.startTime), 0,
                  0, 0, -1, 0, id);
 
@@ -170,6 +171,7 @@ void TrainManager::release_train(std::stringstream &in) {
         info.stoptime + (i < old.stationNum - 2 ? old.stopoverTimes[i] : 0);
     // <old.station, T> -> id
   }
+  
   info.starttime = -1;
   info.price = old.prices[old.stationNum - 2];
   seat.Insert(pair<StationT, TrainInfo>(old.stations[old.stationNum - 1], info),
@@ -388,7 +390,6 @@ void TrainManager::query_transfer(std::stringstream &in) {
   Train *trs = new Train[st.size()], *trt = new Train[ed.size()];
   // tmpdate : st[i] start date
   int *vals = new int[st.size()], *valt = new int[ed.size()], tmpdate;
-  
   // check start time 
   for (int i = 0; i < st.size(); ++i)
     if ((tmpdate = time.back(st[i].starttime + st[i].st.hm)) <=
@@ -506,7 +507,9 @@ void TrainManager::query_transfer(std::stringstream &in) {
         if (valt[j] && st[i].id != ed[j].id)
           valid(i, j);
       }
+  // delete 
   delete []trs, delete  []trt;
+  delete []vals, delete []valt;
   if (!first)
     std::cout << "0\n";
   else {
