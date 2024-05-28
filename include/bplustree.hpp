@@ -318,7 +318,7 @@ class BPlusTree {
   };
   struct Ptr;
   struct BufferPoolManager {
-#define MaxSize 400
+#define MaxSize 40
     DiskManager disk;
     size_t sz = 0;
     int pos[MaxSize], *rt;
