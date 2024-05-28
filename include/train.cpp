@@ -386,21 +386,12 @@ void TrainManager::query_transfer(std::stringstream &in) {
     return;
   }
   // all info is needed
+  int tmpdate;
   Train *trs = new Train , *trt = new Train[ed.size()];
   // tmpdate : st[i] start date
-  int *vals = new int[st.size()], *valt = new int[ed.size()], tmpdate;
   // check start time 
-  for (int i = 0; i < st.size(); ++i)
-    if ((tmpdate = time.back(st[i].starttime + st[i].st.hm)) <=
-            st[i].saleDate1 &&
-        tmpdate >= st[i].saleDate0 )
-           vals[i] = find_release(st[i].id);
-    else vals[i] = 0;
   for (int i = 0; i < ed.size(); ++i)
-    if ((valt[i] = find_release(ed[i].id)))
       TrainFile.get_content(trt[i], ed[i].id);
-    else
-      valt[i] = 0;
   // store a temp : time cost
   TrainInfo ans1, ans2, tmp1, tmp2;
   bool first = 0;
@@ -498,17 +489,18 @@ void TrainManager::query_transfer(std::stringstream &in) {
     }
   };
   for (int i = 0; i < st.size(); ++i)
-    if (vals[i]) {
+    if ((tmpdate = time.back(st[i].starttime + st[i].st.hm)) <=
+            st[i].saleDate1 &&
+        tmpdate >= st[i].saleDate0) {
       TrainFile.get_content(*trs, st[i].id);
       for (int j = 0; j < ed.size(); ++j) {
         // halt for a long time ?
-        if (valt[j] && st[i].id != ed[j].id)
+        if (st[i].id != ed[j].id)
           valid(i, j);
       }
     }
   // delete 
   delete trs, delete  []trt;
-  delete []vals, delete []valt;
   if (!first)
     std::cout << "0\n";
   else {
