@@ -25,7 +25,7 @@
 
 namespace Bptree {
 
-#define Bustub_PAGE_SIZE 32768
+#define Bustub_PAGE_SIZE 4096
 #define INTERNAL_PAGE_HEADER_SIZE 20
 #define LEAF_PAGE_HEADER_SIZE 24
 
