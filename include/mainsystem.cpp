@@ -65,7 +65,6 @@ void mainsystem::buy_ticket(std::stringstream &in) {
   
   ins.stid = infos.stid, ins.edid = infot.stid; // station-id
   ins.price = infot.price - infos.price; // price
-
   ins.s.tim = ins.s.back(infos.starttime +  infos.st.hm); // date-back
   if (infos.saleDate1 < ins.s.tim || infos.saleDate0 > ins.s.tim) {
     std::cout << "-1" << std::endl;

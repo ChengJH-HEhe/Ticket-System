@@ -302,16 +302,13 @@ class BPlusTree {
                     std::to_string(key.second) + ")");
       }
       kstr.append(")");
-
       return kstr;
     }
-
   public:
     page_id_t next_page_id_;
     // Flexible array member for page data.
     MappingType array_[LEAF_PAGE_SIZE];
   };
-
   struct PtrHead {
     int pos, count, pin;
     PtrHead(int a, int b, int c) : pos(a), count(b), pin(c) {}

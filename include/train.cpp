@@ -506,6 +506,7 @@ void TrainManager::query_transfer(std::stringstream &in) {
         if (valt[j] && st[i].id != ed[j].id)
           valid(i, j);
       }
+  delete []trs, delete  []trt;
   if (!first)
     std::cout << "0\n";
   else {
