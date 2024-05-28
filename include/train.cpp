@@ -360,7 +360,6 @@ void TrainManager::query_ticket(std::stringstream &in) {
 void TrainManager::query_transfer(std::stringstream &in) {
   StationT sts, eds;
   std::string type, choice = "time";
-  
   clck time;
   while(in >> type)
     switch (type[1]) {
@@ -387,17 +386,16 @@ void TrainManager::query_transfer(std::stringstream &in) {
     return;
   }
   // all info is needed
-  Train *trs = new Train[st.size()], *trt = new Train[ed.size()];
+  Train *trs = new Train , *trt = new Train[ed.size()];
   // tmpdate : st[i] start date
   int *vals = new int[st.size()], *valt = new int[ed.size()], tmpdate;
   // check start time 
   for (int i = 0; i < st.size(); ++i)
     if ((tmpdate = time.back(st[i].starttime + st[i].st.hm)) <=
             st[i].saleDate1 &&
-        tmpdate >= st[i].saleDate0 && (vals[i] = find_release(st[i].id)))
-      TrainFile.get_content(trs[i], st[i].id);
-    else
-      vals[i] = 0;
+        tmpdate >= st[i].saleDate0 )
+           vals[i] = find_release(st[i].id);
+    else vals[i] = 0;
   for (int i = 0; i < ed.size(); ++i)
     if ((valt[i] = find_release(ed[i].id)))
       TrainFile.get_content(trt[i], ed[i].id);
@@ -438,19 +436,19 @@ void TrainManager::query_transfer(std::stringstream &in) {
       price[stid] to stationid=stid+1
     */ 
     int stt = 0, edt;
-    for (int i = st[xb1].stid + 1; i < trs[xb1].stationNum; ++i) {
-      stt += trs[xb1].travelTimes[i - 1];
+    for (int i = st[xb1].stid + 1; i < trs->stationNum; ++i) {
+      stt += trs->travelTimes[i - 1];
       edt = 0;
       for (int j = ed[xb2].stid - 1; j >= 0; --j) {
         edt += trt[xb2].travelTimes[j];
-        if (trs[xb1].stations[i] == trt[xb2].stations[j]) {
+        if (trs->stations[i] == trt[xb2].stations[j]) {
           /*
             id = trainid
             get the inva, invb
           */ 
           inva = 0;
           TrainInfo sti = st[xb1], edj = ed[xb2];
-          sti.price = trs[xb1].prices[i - 1] - (st[xb1].stid?trs[xb1].prices[st[xb1].stid-1]:0);
+          sti.price = trs->prices[i - 1] - (st[xb1].stid?trs->prices[st[xb1].stid-1]:0);
           edj.price = trt[xb2].prices[ed[xb2].stid - 1] - (j?trt[xb2].prices[j - 1]:0);
           // st start -> st end -> ed start time -> end saledate
           // tmped.hm 是第二站的起始时刻
@@ -473,7 +471,6 @@ void TrainManager::query_transfer(std::stringstream &in) {
             int tmp = time_distance(sti.st.tim, tmped.tim); 
             inva += tmp * 1440, sti.st.add_forth(tmp * 1440);
           }
-
           // sti.st 走到第二辆车的第一站发车
           // inva已经是第一站结束到第二站发车的时间距离了
           // sti.st 是第二站的出发时间
@@ -481,7 +478,7 @@ void TrainManager::query_transfer(std::stringstream &in) {
             ans1 = sti, ans2 = edj, invans = inva + stt + edt;
             if (!first)
               first = 1;
-            mids = trs[xb1].stations[i];
+            mids = trs->stations[i];
             // 第一辆车的发车日期 + 时刻
             ans1.st = {time.back(st[xb1].st.hm + st[xb1].starttime),
                        st[xb1].st.hm};
@@ -497,18 +494,20 @@ void TrainManager::query_transfer(std::stringstream &in) {
       pdend:;
         edt += (j ? trt[xb2].stopoverTimes[j - 1] : 0);
       }
-      stt += trs[xb1].stopoverTimes[i - 1];
+      stt += trs->stopoverTimes[i - 1];
     }
   };
   for (int i = 0; i < st.size(); ++i)
-    if (vals[i])
+    if (vals[i]) {
+      TrainFile.get_content(*trs, st[i].id);
       for (int j = 0; j < ed.size(); ++j) {
         // halt for a long time ?
         if (valt[j] && st[i].id != ed[j].id)
           valid(i, j);
       }
+    }
   // delete 
-  delete []trs, delete  []trt;
+  delete trs, delete  []trt;
   delete []vals, delete []valt;
   if (!first)
     std::cout << "0\n";
