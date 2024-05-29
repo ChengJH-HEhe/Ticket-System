@@ -875,8 +875,11 @@ public:
             key) {
       // assert(id);
       for (int i = 0; i < tmp->GetSize(); ++i)
-        if (tmp->KeyAt(i).first == key)
+        if (tmp->KeyAt(i).first == key) {
+
           result->push_back(tmp->KeyAt(i).second);
+        }
+        else if(key < tmp->KeyAt(i).first)return;
       l = Ptr(&bpm, nullptr,
               id =
                   static_cast<BPlusTreeLeafPage *>(l.content)->GetNextPageId());
