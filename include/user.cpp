@@ -10,9 +10,9 @@ std::string User::profile() {
 int UserManager::find_user(const UserNameT& cur_username, int type = 0) {
   sjtu::vector<int> result;
   if(!type)
-    user.GetValue(cur_username, &result);
+    user.GetValue(cur_username.hsh(), &result);
   else 
-    loginUser.GetValue(cur_username, &result);
+    loginUser.GetValue(cur_username.hsh(), &result);
   return result.empty() ? 0 : result[0];
 }
 void UserManager::get_user(User& olduser, int UserID) {
@@ -43,7 +43,7 @@ int UserManager::add_user(const UserNameT& cur_username, const UserNameT& userna
   //std::cout<<newuser.name << '\n';
   ++UserFile.Count;
   UserFile.modify_content(newuser, UserFile.Count);
-  user.Insert({username,UserFile.Count}, UserFile.Count);
+  user.Insert({username.hsh(),UserFile.Count}, UserFile.Count);
   //std::cout << "username " << UserFile.Count << '\n';
   return 0;
  }
@@ -57,14 +57,14 @@ int UserManager::login(const UserNameT& username, const PassT& password) {
   if(!(CurUser.password == password))
     return -1;
   //std::cout << username << " login as " << id << '\n';
-  loginUser.Insert({username,id}, id);
+  loginUser.Insert({username.hsh(),id}, id);
   return 0;
 }
 int UserManager::logout(const UserNameT& username) {
   User CurUser;
   int id = direct_find_user(username, CurUser, 1);
   if(id > 0) 
-     return loginUser.Remove({username,id}),0;
+     return loginUser.Remove({username.hsh(),id}),0;
   else return -1;
 }
 std::string UserManager::query_profile(const UserNameT& cur_username, const UserNameT& username) {

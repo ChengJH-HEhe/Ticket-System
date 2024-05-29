@@ -20,7 +20,7 @@ struct UserManager {
   // give next page_id
   FileManager<User> UserFile;
   // UserName -> unique id
-  Bptree::BPlusTree<pair<UserNameT,int> , int, UserNameT> user, loginUser;
+  Bptree::BPlusTree<pair<unsigned int,int> , int, unsigned int> user, loginUser;
   void exit() {
     user.exit();
     loginUser.exit();
