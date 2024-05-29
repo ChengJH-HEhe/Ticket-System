@@ -78,7 +78,6 @@ public:
     this->file_name_ = db_file;
     db_io_.open(file_name_, std::ios::binary | std::ios::in | std::ios::out);
     if (!db_io_.good()) {
-
       db_io_.clear();
       db_io_.open(file_name_, std::ios::binary | std::ios::trunc |
                                   std::ios::out | std::ios::in);
