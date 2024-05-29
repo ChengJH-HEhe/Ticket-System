@@ -299,13 +299,19 @@ void TrainManager::query_ticket(std::stringstream &in) {
     std::cout << "0\n";
     return;
   }
-  sjtu::vector<TrainInfo> st, ed, res;
+  sjtu::vector<TrainInfo> st;
   seat.GetValue(sts.hsh(), &st);
   if(st.empty()) {
-    std::cout << res.size() << '\n';
+    std::cout << 0 << '\n';
     return;
   }
+  sjtu::vector<TrainInfo> ed;
   seat.GetValue(eds.hsh(), &ed);
+  if(ed.empty()) {
+    std::cout << 0 << '\n';
+    return;
+  }
+  sjtu::vector<TrainInfo> res;
   size_t i = 0, j = 0;
   while (i < st.size() && j < ed.size()) {
     while (j < ed.size() && ed[j].id < st[i].id)
