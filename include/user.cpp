@@ -32,7 +32,7 @@ int UserManager::add_user(const UserNameT& cur_username, const UserNameT& userna
   const PassT& password,
   const NameT& name, 
   const MailT& email, int type) {
-    //std::cout << "add " << username << " " << UserFile.Count << std::endl;
+    //std::cout << "add " << username << " " << UserFile.Count << '\n';
   if(!UserFile.Count) type = 10;
   else if(cur_username.size()) {
     User OldUser;
@@ -40,11 +40,11 @@ int UserManager::add_user(const UserNameT& cur_username, const UserNameT& userna
       return -1;
   }
   User newuser(username, password, name, email, type);
-  //std::cout<<newuser.name << std::endl;
+  //std::cout<<newuser.name << '\n';
   ++UserFile.Count;
   UserFile.modify_content(newuser, UserFile.Count);
   user.Insert({username,UserFile.Count}, UserFile.Count);
-  //std::cout << "username " << UserFile.Count << std::endl;
+  //std::cout << "username " << UserFile.Count << '\n';
   return 0;
  }
 int UserManager::login(const UserNameT& username, const PassT& password) {
@@ -56,7 +56,7 @@ int UserManager::login(const UserNameT& username, const PassT& password) {
     return -1;
   if(!(CurUser.password == password))
     return -1;
-  //std::cout << username << " login as " << id << std::endl;
+  //std::cout << username << " login as " << id << '\n';
   loginUser.Insert({username,id}, id);
   return 0;
 }
@@ -71,13 +71,13 @@ std::string UserManager::query_profile(const UserNameT& cur_username, const User
   int Nid;
   User CurUser,  NewUser;
   int Cid = direct_find_user(cur_username, CurUser, 1);
-  //std::cout << "find " << cur_username << " " << Cid << " " << std::endl;
+  //std::cout << "find " << cur_username << " " << Cid << " " << '\n';
   if(!Cid) return "-1";
   Cid = CurUser.type;
   if(cur_username == username)
     return CurUser.profile();
   Nid = direct_find_user(username, NewUser, 0);
-  //std::cout << "find " << username << " " << Nid << " " << NewUser.type << " " << std::endl;
+  //std::cout << "find " << username << " " << Nid << " " << NewUser.type << " " << '\n';
   if(Nid > 0 && NewUser.type < Cid) 
     return NewUser.profile();
   else return "-1";

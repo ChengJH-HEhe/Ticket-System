@@ -77,7 +77,7 @@ struct TrainManager {
   // id : begin ~ end no more than 90 copies from saledate; -id -d -> -Tid;
   // query_train basic_info; ticket: seat[100] * 90 trains
   void exit();
-  Bptree::BPlusTree<pair<TrainT,int>, int, TrainT> TrainID;
+  Bptree::BPlusTree<pair<unsigned int,int>, int, unsigned int> TrainID;
   Bptree::BPlusTree<pair<int,int>, int, int> release;
   // from stations to the id price time
   Bptree::BPlusTree<pair<unsigned int, TrainInfo>, TrainInfo, unsigned int, 2000> seat;
@@ -101,7 +101,7 @@ struct TrainManager {
   TrainInfo get_one_TrainInfo(const StationT& name, const int& id);
   void add_train(std::stringstream& in);
   void print(const TrainInfo&, clck, const short&, const StationT&, const StationT&);
-  int find_train(const TrainT&);
+  int find_train(const unsigned int&);
   int find_release(const int& id);
   int get_seat(int index, int st, int ed);
   int update_seat(int index, int st, int ed, int num);

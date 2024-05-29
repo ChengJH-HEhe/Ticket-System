@@ -10,7 +10,7 @@
 void Loginfo::output() {
   std::cout << name << ' ' 
     << sts << ' ' << stt.to_string() << " -> " << eds << ' ' << edt.to_string() << ' '
-    << price << ' ' << num << std::endl;
+    << price << ' ' << num << '\n';
 }
 
 void ticketsystem::buy_ticket(const int& uid, Loginfo& info, const bool& type) {
@@ -30,10 +30,10 @@ void ticketsystem::buy_ticket(const int& uid, Loginfo& info, const bool& type) {
   }
 }
 void ticketsystem::query_order(const int &uid) {
-  //std::cerr << uid << std::endl;
+  //std::cerr << uid << '\n';
   sjtu::vector<pair<int,int> > res;
   ulog.GetValue(uid, &res);
-  std::cout << res.size() << std::endl;
+  std::cout << res.size() << '\n';
   for(int j = int(res.size() - 1); j>=0; --j) {
     auto i = res[j];
     Loginfo info;

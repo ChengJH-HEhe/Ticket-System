@@ -102,7 +102,7 @@ int TrainManager::find_release(const int &id) {
   return result.empty() ? 0 : result[0];
 }
 
-int TrainManager::find_train(const TrainT &cur_Trainname) {
+int TrainManager::find_train(const unsigned int &cur_Trainname) {
   sjtu::vector<int> result;
   TrainID.GetValue(cur_Trainname, &result);
   return result.empty() ? 0 : result[0];
@@ -110,17 +110,17 @@ int TrainManager::find_train(const TrainT &cur_Trainname) {
 void TrainManager::add_train(std::stringstream &in) {
   Train new_Train;
   new_Train.Init(in);
-  if (find_train(new_Train.trainID))
-    return std::cout << "-1" << std::endl, void();
+  if (find_train(new_Train.trainID.hsh()))
+    return std::cout << "-1" << '\n', void();
   // i ~ i+1 站
   for (int i = 1; i < new_Train.stationNum - 1; ++i) {
     new_Train.prices[i] += new_Train.prices[i - 1];
   }
   ++TrainFile.Count;
-  // std::cout << new_Train.trainID << " " << TrainFile.Count << std::endl;
-  TrainID.Insert({new_Train.trainID, TrainFile.Count}, TrainFile.Count);
+  // std::cout << new_Train.trainID << " " << TrainFile.Count << '\n';
+  TrainID.Insert({new_Train.trainID.hsh(), TrainFile.Count}, TrainFile.Count);
   TrainFile.modify_content(new_Train, TrainFile.Count);
-  std::cout << "0" << std::endl;
+  std::cout << "0" << '\n';
 }
 
 void TrainManager::delete_train(std::stringstream &in) {
@@ -128,9 +128,9 @@ void TrainManager::delete_train(std::stringstream &in) {
   std::string type;
   in >> type >> r;
   int id;
-  if (!(id = find_train(r)) || release.find(id))
+  if (!(id = find_train(r.hsh())) || release.find(id))
     return std::cout << "-1\n", void();
-  TrainID.Remove(pair<TrainT, int>(r, id));
+  TrainID.Remove(pair<unsigned int, int>(r.hsh(), id));
   std::cout << "0\n";
 }
 void TrainManager::release_train(std::stringstream &in) {
@@ -138,7 +138,7 @@ void TrainManager::release_train(std::stringstream &in) {
   std::string type;
   in >> type >> r;
   int id;
-  if (!(id = find_train(r)) || release.find(id))
+  if (!(id = find_train(r.hsh())) || release.find(id))
     return std::cout << "-1\n", void();
   // first part for query seat
   ++ReFile.Count;
@@ -160,7 +160,7 @@ void TrainManager::release_train(std::stringstream &in) {
 
   for (int i = 0; i < old.stationNum - 1; ++i) {
     //  std::cout << "Insert " << old.stations[i] << " " << info.stid << " " <<
-    //  info.price << " " << info.id << " " << info.starttime << std::endl;
+    //  info.price << " " << info.id << " " << info.starttime << '\n';
     seat.Insert(pair<unsigned int, TrainInfo>(old.stations[i].hsh(), info), info);
     info.price = old.prices[i];
     if (!i)
@@ -193,7 +193,7 @@ void TrainManager::query_train(std::stringstream &in) {
     }
   }
   int id;
-  if (!(id = TrainID.find(T)))
+  if (!(id = TrainID.find(T.hsh())))
     return std::cout << "-1\n", void();
 
   Train c;
@@ -242,7 +242,7 @@ int TrainManager::get_seat(int index, int st, int ed) {
   Reinfo n;
   ReFile.get_content(n, index);
   int mn = n.seat[st];
-  //std::cout << "index" << index << " " << st << " " << ed << std::endl;
+  //std::cout << "index" << index << " " << st << " " << ed << '\n';
   for (int i = st; i < ed; ++i)
     mn = mn < n.seat[i] ? mn : n.seat[i];
   return mn;
@@ -274,7 +274,7 @@ void TrainManager::print(const TrainInfo &a, clck time, const short &date,
             << time.add_forth(a.stoptime - a.starttime).to_string() << " "
             << a.price << " "
             << get_seat(a.id + time_distance(a.saleDate0, date), a.stid, a.edid)
-            << std::endl;
+            << '\n';
 }
 void TrainManager::query_ticket(std::stringstream &in) {
   StationT sts, eds;

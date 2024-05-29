@@ -22,7 +22,7 @@ void usersystem::add_user(std::stringstream& in) {
       default:break;
     }
   }
-  std::cout << um.add_user(cur, now, password, name, email, tp) << std::endl;
+  std::cout << um.add_user(cur, now, password, name, email, tp) << '\n';
 }
 void usersystem::login(std::stringstream& in) {
   UserNameT cur;
@@ -34,7 +34,7 @@ void usersystem::login(std::stringstream& in) {
       case 'p':in>>password;break;
     }
   }
-  std::cout << um.login(cur, password) << std::endl;
+  std::cout << um.login(cur, password) << '\n';
 }
 void usersystem::logout(std::stringstream& in) {
   UserNameT cur;
@@ -44,7 +44,7 @@ void usersystem::logout(std::stringstream& in) {
       case 'u':in >> cur;break;
     }
   }
-  std::cout << um.logout(cur) << std::endl;
+  std::cout << um.logout(cur) << '\n';
 }
 void usersystem::query_profile(std::stringstream& in) {
   UserNameT cur,user;
@@ -56,7 +56,7 @@ void usersystem::query_profile(std::stringstream& in) {
       case 'u':in >> user; break;
     }
   }
-  std::cout << um.query_profile(cur, user) << std::endl;
+  std::cout << um.query_profile(cur, user) << '\n';
 }
 void usersystem::modify_profile(std::stringstream& in) {
   std::string type;
@@ -76,5 +76,5 @@ void usersystem::modify_profile(std::stringstream& in) {
       default:break;
     }
   }
-  std::cout << um.modify_profile(cur, now, password, name, email, tp) << std::endl;
+  std::cout << um.modify_profile(cur, now, password, name, email, tp) << '\n';
 }

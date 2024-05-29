@@ -46,20 +46,20 @@ void mainsystem::buy_ticket(std::stringstream &in) {
     }
   }
   if (!(uid = userSystem.um.find_user(uname, 1))) {
-    std::cout << -1 << std::endl;
+    std::cout << -1 << '\n';
     return;
   }
-  int id1 = trainSystem.TM.find_train(ins.name), id2;
+  int id1 = trainSystem.TM.find_train(ins.name.hsh()), id2;
   // trainsystem check seat?
   if (!id1 || !(id2 = trainSystem.TM.find_release(id1))) {
-    std::cout << "-1" << std::endl;
+    std::cout << "-1" << '\n';
     return;
   }
   // we need to get the traininfo
   TrainInfo infos = trainSystem.get_TrainInfo(ins.sts, id1),
             infot = trainSystem.get_TrainInfo(ins.eds, id1);
   if(infos.id == -1 || infot.id == -1 || infos.stid > infot.stid) {
-    std::cout << "-1" << std::endl;
+    std::cout << "-1" << '\n';
     return;
   }
   
@@ -67,7 +67,7 @@ void mainsystem::buy_ticket(std::stringstream &in) {
   ins.price = infot.price - infos.price; // price
   ins.s.tim = ins.s.back(infos.starttime +  infos.st.hm); // date-back
   if (infos.saleDate1 < ins.s.tim || infos.saleDate0 > ins.s.tim) {
-    std::cout << "-1" << std::endl;
+    std::cout << "-1\n";
     return;
   } // not in the interval
   // time & saledate
