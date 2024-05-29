@@ -148,7 +148,10 @@ void mainsystem::exit() {
   std::cout << "bye\n";
   userSystem.um.loginUser.exit(1);
 }
-Timer query_transfer_timer("query_transfer");
+Timer query_transfer_timer("query_transfer"),
+refund_timer("buy ticket"),
+// user_timer("user timer"),
+query_ticket_timer("query ticket");
 
 bool mainsystem::init(std::stringstream &in) {
   std::string tim;
@@ -196,7 +199,9 @@ bool mainsystem::init(std::stringstream &in) {
         trainSystem.query_train(in);
         break;
       case 4:{
+        query_ticket_timer.start();
         trainSystem.query_ticket(in);
+        query_ticket_timer.stop();
       }
         break;
       case 5:{
@@ -212,15 +217,18 @@ bool mainsystem::init(std::stringstream &in) {
   for (int i = 0; i < 5; ++i)
     if (privates[i] == cmd) {
       switch (i) {
-      case 0:
+      case 0:{
+        refund_timer.start();
         buy_ticket(in);
-        break;
+        refund_timer.stop();
+       } break;
       case 1:
         query_order(in);
         break;
-      case 2:
+      case 2:{
         refund_ticket(in);
         break;
+      }
       case 3:
         clean();
         break;
