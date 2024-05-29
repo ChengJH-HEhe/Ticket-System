@@ -300,7 +300,12 @@ void TrainManager::query_ticket(std::stringstream &in) {
     return;
   }
   sjtu::vector<TrainInfo> st, ed, res;
-  seat.GetValue(sts.hsh(), &st), seat.GetValue(eds.hsh(), &ed);
+  seat.GetValue(sts.hsh(), &st);
+  if(st.empty()) {
+    std::cout << res.size() << '\n';
+    return;
+  }
+  seat.GetValue(eds.hsh(), &ed);
   size_t i = 0, j = 0;
   while (i < st.size() && j < ed.size()) {
     while (j < ed.size() && ed[j].id < st[i].id)
@@ -358,10 +363,6 @@ void TrainManager::query_ticket(std::stringstream &in) {
 }
 int ans;
 
-void brute_transfer(sjtu::vector<TrainInfo>& st, sjtu::vector<TrainInfo>& ed) {
-
-}
-
 void TrainManager::query_transfer(std::stringstream &in) {
   StationT sts, eds;
   std::string type, choice = "time";
@@ -383,10 +384,16 @@ void TrainManager::query_transfer(std::stringstream &in) {
     return;
   }
   sjtu::vector<TrainInfo> st, ed;
-  seat.GetValue(sts.hsh(), &st), seat.GetValue(eds.hsh(), &ed);
+
+  seat.GetValue(sts.hsh(), &st);
+  if (st.empty()) {
+    std::cout << "0\n";
+    return;
+  }
+  seat.GetValue(eds.hsh(), &ed);
   // nead to get the real train
   bool tp = choice == "time" ? 0 : 1;
-  if (st.empty() || ed.empty()) {
+  if (ed.empty()) {
     std::cout << "0\n";
     return;
   }
