@@ -80,7 +80,7 @@ struct TrainManager {
   Bptree::BPlusTree<pair<unsigned int,int>, int, unsigned int> TrainID;
   Bptree::BPlusTree<pair<int,int>, int, int> release;
   // from stations to the id price time
-  Bptree::BPlusTree<pair<unsigned int, TrainInfo>, TrainInfo, unsigned int, 1320> seat;
+  Bptree::BPlusTree<pair<unsigned int, TrainInfo>, TrainInfo, unsigned int, 1280> seat;
   // steal? find second -intmax min
   int TrainCount, ReleaseCount;
   FileManager<Train> TrainFile;
