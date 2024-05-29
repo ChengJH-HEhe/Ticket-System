@@ -65,7 +65,7 @@ struct Train{
 };
 
 struct Reinfo{
-  int seat[100]; 
+  int seat[21]; 
   int num, stop;
   Reinfo(int num_ = 0, int stop_ = 0) {
     num = num_, stop = stop_;
@@ -80,7 +80,7 @@ struct TrainManager {
   Bptree::BPlusTree<pair<unsigned int,int>, int, unsigned int> TrainID;
   Bptree::BPlusTree<pair<int,int>, int, int> release;
   // from stations to the id price time
-  Bptree::BPlusTree<pair<unsigned int, TrainInfo>, TrainInfo, unsigned int, 1024> seat;
+  Bptree::BPlusTree<pair<unsigned int, TrainInfo>, TrainInfo, unsigned int, 768> seat;
   // steal? find second -intmax min
   FileManager<Train> TrainFile;
   FileManager<Reinfo> ReFile;
