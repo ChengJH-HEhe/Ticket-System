@@ -25,12 +25,12 @@
 
 namespace Bptree {
 
-#define Bustub_PAGE_SIZE 4096
+#define Bustub_PAGE_SIZE 8192
 #define INTERNAL_PAGE_HEADER_SIZE 20
 #define LEAF_PAGE_HEADER_SIZE 24
 
 #define INDEX_TEMPLATE_ARGUMENTS                                               \
-  template <typename KeyType, typename ValueType, typename GetType, int bpmSize = 2000>
+  template <typename KeyType, typename ValueType, typename GetType, int bpmSize = 1024>
 
 // define page type enum
 enum class IndexPageType { INVALID_INDEX_PAGE = 0, LEAF_PAGE, INTERNAL_PAGE };
