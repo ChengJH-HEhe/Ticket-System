@@ -77,10 +77,11 @@ struct TrainManager {
   // id : begin ~ end no more than 90 copies from saledate; -id -d -> -Tid;
   // query_train basic_info; ticket: seat[100] * 90 trains
   void exit();
+  // Timer train_timer;
   Bptree::BPlusTree<pair<unsigned int,int>, int, unsigned int> TrainID;
   Bptree::BPlusTree<pair<int,int>, int, int> release;
   // from stations to the id price time
-  Bptree::BPlusTree<pair<unsigned int, TrainInfo>, TrainInfo, unsigned int, 896> seat;
+  Bptree::BPlusTree<pair<unsigned int, TrainInfo>, TrainInfo, unsigned int, 1600> seat;
   // steal? find second -intmax min
   FileManager<Train> TrainFile;
   FileManager<Reinfo> ReFile;
@@ -90,6 +91,7 @@ struct TrainManager {
     seat.Init(file_name + "_seat");
     TrainID.Init(file_name + "_id");
     release.Init(file_name + "_release");
+    // train_timer.name = file_name.c_str();
   }
   void remove() {
     TrainFile.remove();

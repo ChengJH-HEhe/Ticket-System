@@ -148,9 +148,7 @@ void mainsystem::exit() {
   std::cout << "bye\n";
   userSystem.um.loginUser.exit(1);
 }
-// Timer query_transfer_timer("query_transfer"),
-// refund_timer("buy ticket"),
-// // user_timer("user timer"),
+// static Timer query_transfer_timer("query_transfer"),
 // query_ticket_timer("query ticket");
 
 bool mainsystem::init(std::stringstream &in) {
@@ -195,12 +193,13 @@ bool mainsystem::init(std::stringstream &in) {
       case 2:
         trainSystem.release_train(in);
         break;
-      case 3:
+      case 3: {
         trainSystem.query_train(in);
+      }
         break;
       case 4:{
-        trainSystem.query_ticket(in);
         //query_ticket_timer.start();
+        trainSystem.query_ticket(in);
         //query_ticket_timer.stop();
       }
         break;

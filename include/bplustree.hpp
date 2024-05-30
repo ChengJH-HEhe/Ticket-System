@@ -30,7 +30,7 @@ namespace Bptree {
 #define LEAF_PAGE_HEADER_SIZE 24
 
 #define INDEX_TEMPLATE_ARGUMENTS                                               \
-  template <typename KeyType, typename ValueType, typename GetType, int bpmSize = 256>
+  template <typename KeyType, typename ValueType, typename GetType, int bpmSize = 100>
 
 // define page type enum
 enum class IndexPageType { INVALID_INDEX_PAGE = 0, LEAF_PAGE, INTERNAL_PAGE };
@@ -317,6 +317,7 @@ class BPlusTree {
   struct BufferPoolManager {
     DiskManager disk;
     size_t sz = 0;
+    size_t all_count = 0, suc_count = 0;
     int pos[MaxSize], *rt;
     Ptr tmp[MaxSize];
     std::fstream root;
@@ -391,11 +392,13 @@ class BPlusTree {
     }
 
     void get_content(page_id_t pos_, Ptr *pointer) {
+      ++all_count;
       if (pos_ == -1)
         goto notfound;
       for (int i = 0; i < sz; ++i)
         if (pos_ == pos[i]) {
           *pointer = tmp[i];
+          ++suc_count;
           return;
         }
     notfound:;
@@ -438,6 +441,9 @@ class BPlusTree {
       if bufferpool is full
         delete reference = full type
     */
+    // ~BufferPoolManager<MaxSize>(){
+    //   //std::cerr << all_count << " " << suc_count << std::endl;
+    // }
   };
   struct Ptr {
     BPlusTreePage *content = nullptr;
@@ -882,7 +888,7 @@ public:
         else if(key < tmp->KeyAt(i).first)return;
       l = Ptr(&bpm, nullptr,
               id =
-                  static_cast<BPlusTreeLeafPage *>(l.content)->GetNextPageId());
+                  static_cast<BPlusTreeLeafPage *>(l.content)->next_page_id_);
     }
   }
   // Return the page id of the root node

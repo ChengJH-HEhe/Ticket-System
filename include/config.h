@@ -19,8 +19,9 @@ class Timer {
   private:
     std::chrono::time_point<std::chrono::high_resolution_clock> start_time;
     long totduration;
-    const char *name;
   public:
+    const char *name;
+    Timer() = default;
     Timer(const char *s) : name(s), totduration(0) {}
     void start() {
         start_time = std::chrono::system_clock::now();

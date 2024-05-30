@@ -299,7 +299,8 @@ void TrainManager::query_ticket(std::stringstream &in) {
     std::cout << "0\n";
     return;
   }
-
+  //
+  // train_timer.start();
   sjtu::vector<TrainInfo> st;
   seat.GetValue(sts.hsh(), &st);
   if(st.empty()) {
@@ -310,8 +311,10 @@ void TrainManager::query_ticket(std::stringstream &in) {
   seat.GetValue(eds.hsh(), &ed);
   if(ed.empty()) {
     std::cout << 0 << '\n';
+    // train_timer.stop();
     return;
   }
+  // train_timer.stop();
   sjtu::vector<TrainInfo> res;
   size_t i = 0, j = 0;
   while (i < st.size() && j < ed.size()) {
@@ -368,6 +371,7 @@ void TrainManager::query_ticket(std::stringstream &in) {
   }
   delete[] xb;
 }
+
 int ans;
 
 void TrainManager::query_transfer(std::stringstream &in) {
@@ -575,7 +579,7 @@ void TrainManager::query_transfer(std::stringstream &in) {
     }
   };
   
-  if(ed.size()<2000) {
+  if(ed.size()<1000) {
     Train* trt = new Train[ed.size()];
     for(int i = 0; i < ed.size(); ++i)
       TrainFile.get_content(trt[i], ed[i].id);
