@@ -4,7 +4,6 @@
 #include "pair.hpp"
 #include "string.hpp"
 #include "vector.hpp"
-#include "map.hpp"
 #include <algorithm>
 #include <cmath>
 #include <iostream>
@@ -323,7 +322,7 @@ class BPlusTree {
     size_t all_count = 0, suc_count = 0;
     int pos[MaxSize], *rt;
     Ptr tmp[MaxSize];
-    sjtu::map<int,int> mp;
+    // sjtu::map<int,int> mp;
     std::fstream root;
     std::string root_name;
     void init(std::string file_name, int *header_id) {
@@ -404,11 +403,15 @@ class BPlusTree {
       // std::cerr << 233 << std::endl;
     }
 void get_content(page_id_t pos_, Ptr *pointer) {
-      auto res = mp.find(pos_);
-      if (pos_ == -1 || mp.empty() || res == mp.end())
+      ++all_count;
+      if (pos_ == -1)
         goto notfound;
-      *pointer = tmp[res->second];
-      return;
+      for (int i = 0; i < sz; ++i)
+        if (pos_ == pos[i]) {
+          *pointer = tmp[i];
+          ++suc_count;
+          return;
+        }
     notfound:;
       if (pointer->head == nullptr)
         pointer->head = new PtrHead(pos_, 0, 0);
@@ -417,6 +420,8 @@ void get_content(page_id_t pos_, Ptr *pointer) {
         pos_ = pointer->head->pos;
         disk.addpage(pos_);
       } else {
+        // std::cerr << " Rea Pa " << pos_ << std::endl;
+        // assert(0);
         ReadPage(pointer->head->pos, pointer->content);
       }
       ++pointer->head->count;
@@ -425,60 +430,15 @@ void get_content(page_id_t pos_, Ptr *pointer) {
         for (int i = sz - 1; i >= 0; --i) {
           if (tmp[i].head->count == 1) {
             del_content(i, 1);
-            if(res != mp.end()) mp.erase(res);
-            mp.insert({pos_, i});
             add_content(i, pos_, pointer);
             return;
           }
         }
       } else {
         add_content(sz++, pos_, pointer);
-        mp.insert({pos_, int(sz-1)});
       }
     }
-    // void get_content(page_id_t pos_, Ptr *pointer) {
-    //   //std:: cerr << ++all_count << std::endl;
-    //   //auto res = mp.find(pos_);
-    //   if (pos_ == -1)
-    //     goto notfound;
-    //   for (int i = 0; i < sz; ++i)
-    //     if (pos_ == pos[i]) {
-    //       *pointer = tmp[i];
-    //       ++suc_count;
-    //       return;
-    //     }
-    //   // *pointer = tmp[res->second];
-    //   // return;
-    // notfound:;
-    //   if (pointer->head == nullptr)
-    //     pointer->head = new PtrHead(pos_, 0, 0);
-    //   if (pos_ == -1) {
-    //     getpos(pointer->head);
-    //     pos_ = pointer->head->pos;
-    //     disk.addpage(pos_);
-    //   } else {
-    //     // std::cerr << " Rea Pa " << pos_ << std::endl;
-    //     // assert(0);
-    //     ReadPage(pointer->head->pos, pointer->content);
-    //   }
-    //   ++pointer->head->count;
-    //   // make sure pointer is valid
-    //   if (sz == MaxSize) {
-    //     for (int i = sz - 1; i > 0; --i) {
-    //       if (tmp[i].head->count == 1) {
-    //         del_content(i, 1);
-    //         add_content(i, pos_, pointer);
-    //         // if(res != mp.end()) mp.erase(res);
-    //         // mp.insert({pos_, i});
-    //         return;
-    //       }
-    //     }
-    //   } else {
-    //     add_content(sz, pos_, pointer);
-    //     //mp.insert({pos_, int(sz)});
-    //     ++sz;
-    //   }
-    // }
+
     void exit() {
       for (size_t i = 0; i < sz; ++i) {
         if (pos[i])
