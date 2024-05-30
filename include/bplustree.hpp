@@ -888,7 +888,6 @@ public:
   // Return the page id of the root node
   page_id_t GetRootPageId() { return header_page_id_; }
   BufferPoolManager<bpmSize> bpm;
-  void debug() {}
 
 private:
   /* Debug Routines for FREE!! */

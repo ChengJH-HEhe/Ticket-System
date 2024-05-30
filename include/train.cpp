@@ -299,6 +299,7 @@ void TrainManager::query_ticket(std::stringstream &in) {
     std::cout << "0\n";
     return;
   }
+
   sjtu::vector<TrainInfo> st;
   seat.GetValue(sts.hsh(), &st);
   if(st.empty()) {
