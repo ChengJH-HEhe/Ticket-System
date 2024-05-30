@@ -149,7 +149,8 @@ void mainsystem::exit() {
   userSystem.um.loginUser.exit(1);
 }
 // static Timer query_transfer_timer("query_transfer"),
-// query_ticket_timer("query ticket");
+// query_ticket_timer("query ticket"),
+// find_seat("query_ticket");
 
 bool mainsystem::init(std::stringstream &in) {
   std::string tim;
@@ -198,15 +199,11 @@ bool mainsystem::init(std::stringstream &in) {
       }
         break;
       case 4:{
-        //query_ticket_timer.start();
         trainSystem.query_ticket(in);
-        //query_ticket_timer.stop();
       }
         break;
       case 5:{
-        //query_transfer_timer.start();
         trainSystem.query_transfer(in);
-        //query_transfer_timer.stop();
       }
         break;
       }

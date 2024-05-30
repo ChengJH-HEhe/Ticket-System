@@ -301,6 +301,7 @@ void TrainManager::query_ticket(std::stringstream &in) {
   }
   //
   // train_timer.start();
+  
   sjtu::vector<TrainInfo> st;
   seat.GetValue(sts.hsh(), &st);
   if(st.empty()) {

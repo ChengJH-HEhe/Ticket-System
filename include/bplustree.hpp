@@ -619,7 +619,7 @@ public:
     }
     BPlusTreeLeafPage *new_page = new BPlusTreeLeafPage;
     for (int i = (leaf_max_size_ >> 1); i < leaf_max_size_; ++i)
-      new_page->SetKeyAt(i - (leaf_max_size_ >> 1), cont->KeyAt(i),
+      new_page->SetKeyAt(i - (leaf_max_size_ >> 1), cont->array_[i].first,
                          cont->ValAt(i));
     if (index < (leaf_max_size_ >> 1)) {
       cont->SetSize((leaf_max_size_ >> 1));
@@ -665,7 +665,7 @@ public:
 
       BPlusTreeInternalPage *new_fa = new BPlusTreeInternalPage;
       for (int i = internal_max_size_ >> 1; i < internal_max_size_; ++i)
-        new_fa->SetKeyAt(i - (internal_max_size_ >> 1), fa_cont->KeyAt(i),
+        new_fa->SetKeyAt(i - (internal_max_size_ >> 1), fa_cont->array_[i].first,
                          fa_cont->ValAt(i));
       fa->SetSize(internal_max_size_ >> 1);
       if (index < (internal_max_size_ >> 1)) {
@@ -862,9 +862,9 @@ public:
     else
       return val.id = -1, void();
     for (int i = 0; i < tmp->GetSize(); ++i) {
-      if (key < tmp->KeyAt(i).first)
+      if (key < tmp->array_[i].first.first)
         break;
-      if (tmp->KeyAt(i).first == key && tmp->KeyAt(i).second.id == val.id) {
+      if (tmp->array_[i].first.first == key && tmp->array_[i].first.second.id == val.id) {
         val = tmp->ValAt(i);
         return;
       }
@@ -874,20 +874,17 @@ public:
   void GetValue(const GetType &key, sjtu::vector<ValueType> *result) {
     Ptr l = FindPos(KeyType{key, ValueType()});
     BPlusTreeLeafPage *tmp;
-    int id = -1;
     while (
         l.content &&
         (tmp = static_cast<BPlusTreeLeafPage *>(l.content))->KeyAt(0).first <=
             key) {
       // assert(id);
       for (int i = 0; i < tmp->GetSize(); ++i)
-        if (tmp->KeyAt(i).first == key) {
-
-          result->push_back(tmp->KeyAt(i).second);
+        if (tmp->array_[i].first.first == key) {
+          result->push_back(tmp->array_[i].first.second);
         }
-        else if(key < tmp->KeyAt(i).first)return;
+        else if(key < tmp->array_[i].first.first)return;
       l = Ptr(&bpm, nullptr,
-              id =
                   static_cast<BPlusTreeLeafPage *>(l.content)->next_page_id_);
     }
   }
