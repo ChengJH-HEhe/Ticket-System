@@ -301,13 +301,16 @@ void TrainManager::query_ticket(std::stringstream &in) {
   }
   //
   // train_timer.start();
-  
+  static int stsz = 0, edsz = 0;
   sjtu::vector<TrainInfo> st;
   seat.GetValue(sts.hsh(), &st);
   if(st.empty()) {
     std::cout << 0 << '\n';
     return;
   }
+  // if(stsz < st.size()) {
+  //   std::cerr << "st " << (stsz = st.size()) << std::endl;
+  // }
   sjtu::vector<TrainInfo> ed;
   seat.GetValue(eds.hsh(), &ed);
   if(ed.empty()) {
@@ -315,6 +318,9 @@ void TrainManager::query_ticket(std::stringstream &in) {
     // train_timer.stop();
     return;
   }
+  // if(edsz < ed.size()) {
+  //   std::cerr << "ed " << (edsz = ed.size()) << std::endl;
+  // }
   // train_timer.stop();
   sjtu::vector<TrainInfo> res;
   size_t i = 0, j = 0;

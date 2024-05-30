@@ -4,6 +4,7 @@
 #include "pair.hpp"
 #include "string.hpp"
 #include "vector.hpp"
+#include "map.hpp"
 #include <algorithm>
 #include <cmath>
 #include <iostream>
@@ -25,12 +26,12 @@
 
 namespace Bptree {
 
-#define Bustub_PAGE_SIZE 8192
+#define Bustub_PAGE_SIZE 4096
 #define INTERNAL_PAGE_HEADER_SIZE 20
 #define LEAF_PAGE_HEADER_SIZE 24
 
 #define INDEX_TEMPLATE_ARGUMENTS                                               \
-  template <typename KeyType, typename ValueType, typename GetType, int bpmSize = 100>
+  template <typename KeyType, typename ValueType, typename GetType, int bpmSize = 2000>
 
 // define page type enum
 enum class IndexPageType { INVALID_INDEX_PAGE = 0, LEAF_PAGE, INTERNAL_PAGE };
@@ -322,6 +323,7 @@ class BPlusTree {
     size_t all_count = 0, suc_count = 0;
     int pos[MaxSize], *rt;
     Ptr tmp[MaxSize];
+    sjtu::map<int,int> mp;
     std::fstream root;
     std::string root_name;
     void init(std::string file_name, int *header_id) {
@@ -340,6 +342,16 @@ class BPlusTree {
       }
     }
     void remove() {
+      for(int i = 0;i < sz; ++i)
+        if(pos[i]) {
+          //std::cerr << "del " << pos[i] << " " << tmp[i].head << std::endl;
+          delete tmp[i].head;
+          if (tmp[i].content->IsLeafPage())
+            delete static_cast<BPlusTreeLeafPage *>(tmp[i].content);
+          else
+            delete static_cast<BPlusTreeInternalPage *>(tmp[i].content);
+          tmp[i].head = nullptr;
+        }
       root.close();
       std::remove(root_name.c_str());
       disk.remove();
@@ -383,8 +395,7 @@ class BPlusTree {
       if (tmp[pos_].head->pin)
         WritePage(tmp[pos_].head, tmp[pos_].content);
       // bug!!!
-      if (tp)
-        delete tmp[pos_].head, tmp[pos_].head = nullptr;
+      delete tmp[pos_].head, tmp[pos_].head = nullptr;
       pos[pos_] = 0;
       if (tmp[pos_].content->IsLeafPage())
         delete static_cast<BPlusTreeLeafPage *>(tmp[pos_].content);
@@ -392,17 +403,12 @@ class BPlusTree {
         delete static_cast<BPlusTreeInternalPage *>(tmp[pos_].content);
       // std::cerr << 233 << std::endl;
     }
-
-    void get_content(page_id_t pos_, Ptr *pointer) {
-      ++all_count;
-      if (pos_ == -1)
+void get_content(page_id_t pos_, Ptr *pointer) {
+      auto res = mp.find(pos_);
+      if (pos_ == -1 || mp.empty() || res == mp.end())
         goto notfound;
-      for (int i = 0; i < sz; ++i)
-        if (pos_ == pos[i]) {
-          *pointer = tmp[i];
-          ++suc_count;
-          return;
-        }
+      *pointer = tmp[res->second];
+      return;
     notfound:;
       if (pointer->head == nullptr)
         pointer->head = new PtrHead(pos_, 0, 0);
@@ -411,8 +417,6 @@ class BPlusTree {
         pos_ = pointer->head->pos;
         disk.addpage(pos_);
       } else {
-        // std::cerr << " Rea Pa " << pos_ << std::endl;
-        // assert(0);
         ReadPage(pointer->head->pos, pointer->content);
       }
       ++pointer->head->count;
@@ -421,16 +425,61 @@ class BPlusTree {
         for (int i = sz - 1; i >= 0; --i) {
           if (tmp[i].head->count == 1) {
             del_content(i, 1);
+            if(res != mp.end()) mp.erase(res);
+            mp.insert({pos_, i});
             add_content(i, pos_, pointer);
             return;
           }
         }
       } else {
         add_content(sz++, pos_, pointer);
+        mp.insert({pos_, int(sz-1)});
       }
     }
+    // void get_content(page_id_t pos_, Ptr *pointer) {
+    //   //std:: cerr << ++all_count << std::endl;
+    //   //auto res = mp.find(pos_);
+    //   if (pos_ == -1)
+    //     goto notfound;
+    //   for (int i = 0; i < sz; ++i)
+    //     if (pos_ == pos[i]) {
+    //       *pointer = tmp[i];
+    //       ++suc_count;
+    //       return;
+    //     }
+    //   // *pointer = tmp[res->second];
+    //   // return;
+    // notfound:;
+    //   if (pointer->head == nullptr)
+    //     pointer->head = new PtrHead(pos_, 0, 0);
+    //   if (pos_ == -1) {
+    //     getpos(pointer->head);
+    //     pos_ = pointer->head->pos;
+    //     disk.addpage(pos_);
+    //   } else {
+    //     // std::cerr << " Rea Pa " << pos_ << std::endl;
+    //     // assert(0);
+    //     ReadPage(pointer->head->pos, pointer->content);
+    //   }
+    //   ++pointer->head->count;
+    //   // make sure pointer is valid
+    //   if (sz == MaxSize) {
+    //     for (int i = sz - 1; i > 0; --i) {
+    //       if (tmp[i].head->count == 1) {
+    //         del_content(i, 1);
+    //         add_content(i, pos_, pointer);
+    //         // if(res != mp.end()) mp.erase(res);
+    //         // mp.insert({pos_, i});
+    //         return;
+    //       }
+    //     }
+    //   } else {
+    //     add_content(sz, pos_, pointer);
+    //     //mp.insert({pos_, int(sz)});
+    //     ++sz;
+    //   }
+    // }
     void exit() {
-      
       for (size_t i = 0; i < sz; ++i) {
         if (pos[i])
           del_content(i);
@@ -874,7 +923,7 @@ public:
     val.id = -1;
   }
   void GetValue(const GetType &key, sjtu::vector<ValueType> *result) {
-    Ptr l = FindPos(KeyType{key, INT_MIN});
+    Ptr l = FindPos(KeyType{key, 0});
     BPlusTreeLeafPage *tmp;
     while (
         l.content &&
@@ -885,7 +934,7 @@ public:
         if (tmp->KeyAt(i).first == key) {
           result->push_back(tmp->ValAt(i));
         }
-        else if(key < tmp->KeyAt(i).first)return;
+        //else if(key < tmp->KeyAt(i).first)return;
       l = Ptr(&bpm, nullptr,
                   static_cast<BPlusTreeLeafPage *>(l.content)->next_page_id_);
     }
