@@ -134,10 +134,10 @@ void mainsystem::refund_ticket(std::stringstream &in) {
                           ins.stid, ins.edid, ins.num) > 0) {
       // ulog update : 0 -> 1
       // user[id] pnd. -> userid: 
-        ticketSystem.ulog.update({res1[i].second, {res1[i].first, 0}},
-        {res1[i].second, {res1[i].first, 1}});
+        ticketSystem.ulog.update({res1[i].second, res1[i].first},
+         {res1[i].first, 1});
         //ins.output();
-        ticketSystem.pnd.Remove({seatid, res1[i]});
+        ticketSystem.pnd.Remove({seatid, res1[i].first});
       }
   }
 }

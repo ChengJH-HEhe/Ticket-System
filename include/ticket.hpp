@@ -24,9 +24,9 @@ struct ticketsystem {
   // <订单号, > - sta，id->订单号
   FileManager<Loginfo> Flog; 
   // 车次 订单号<trainid logid> -> <logid>订单号
-  Bptree::BPlusTree<pair<int, pair<int,int>>, pair<int,int>, int> ulog;
+  Bptree::BPlusTree<pair<int, int>, pair<int,int>, int> ulog;
   // -trainid < -Flog.id, -user.id >
-  Bptree::BPlusTree<pair<int, pair<int, int> >, pair<int, int>, int> pnd;
+  Bptree::BPlusTree<pair<int, int>, pair<int, int>, int> pnd;
   void exit(){
     ulog.exit();
     pnd.exit();

@@ -258,7 +258,7 @@ class BPlusTree {
     void SetNextPageId(page_id_t next_page_id) { next_page_id_ = next_page_id; }
     auto KeyAt(int index) const -> KeyType { return array_[index].first; }
     auto ValAt(int index) const -> ValueType { return array_[index].second; }
-    size_t find(const KeyType &key, const ValueType &value) {
+    size_t find(const KeyType &key) {
       size_t pos = 0, sz = GetSize();
       for (int length = (1 << int(log2(sz))); length; length >>= 1)
         if (pos + length < sz && !(key < KeyAt(pos + length)))
@@ -279,6 +279,8 @@ class BPlusTree {
       IncreaseSize(-1);
     }
     void ModKeyAt(const KeyType &key, int index) { array_[index].first = key; }
+    void ModValAt(const ValueType&val, int index) { array_[index].second = val;  }
+
     /**
      * @brief For test only return a string representing all keys in
      * this leaf page formatted as "(key1,key2,key3,...)"
@@ -608,7 +610,7 @@ public:
     }
     Ptr pos(v.back());
     BPlusTreeLeafPage *cont = static_cast<BPlusTreeLeafPage *>(pos.content);
-    size_t index = cont->find(key, value);
+    size_t index = cont->find(key);
     if (index & 1)
       return 0;
     index >>= 1;
@@ -619,7 +621,7 @@ public:
     }
     BPlusTreeLeafPage *new_page = new BPlusTreeLeafPage;
     for (int i = (leaf_max_size_ >> 1); i < leaf_max_size_; ++i)
-      new_page->SetKeyAt(i - (leaf_max_size_ >> 1), cont->array_[i].first,
+      new_page->SetKeyAt(i - (leaf_max_size_ >> 1), cont->KeyAt(i),
                          cont->ValAt(i));
     if (index < (leaf_max_size_ >> 1)) {
       cont->SetSize((leaf_max_size_ >> 1));
@@ -665,7 +667,7 @@ public:
 
       BPlusTreeInternalPage *new_fa = new BPlusTreeInternalPage;
       for (int i = internal_max_size_ >> 1; i < internal_max_size_; ++i)
-        new_fa->SetKeyAt(i - (internal_max_size_ >> 1), fa_cont->array_[i].first,
+        new_fa->SetKeyAt(i - (internal_max_size_ >> 1), fa_cont->KeyAt(i),
                          fa_cont->ValAt(i));
       fa->SetSize(internal_max_size_ >> 1);
       if (index < (internal_max_size_ >> 1)) {
@@ -761,7 +763,7 @@ public:
     Ptr pos = v.back();
     BPlusTreePage *cont = pos.content;
     size_t index =
-        static_cast<BPlusTreeLeafPage *>(cont)->find(key, key.second);
+        static_cast<BPlusTreeLeafPage *>(cont)->find(key);
     if (index % 2 == 0)
       return;
     index >>= 1;
@@ -830,7 +832,7 @@ public:
       header_page_id_ = -1;
   }
   // update key&value -> newkey&value
-  void update(const KeyType &key, const KeyType &newkey) {
+  void update(const KeyType &key, const ValueType &newkey) {
     // if(key.second == 2)
     //   std::cerr << "让我看看" << std::endl;
     sjtu::vector<Ptr> v;
@@ -841,11 +843,11 @@ public:
     Ptr pos = v.back();
     BPlusTreePage *cont = pos.content;
     size_t index =
-        static_cast<BPlusTreeLeafPage *>(cont)->find(key, key.second);
+        static_cast<BPlusTreeLeafPage *>(cont)->find(key);
     if (index % 2 == 0)
       assert(0);
     index >>= 1;
-    static_cast<BPlusTreeLeafPage *>(cont)->ModKeyAt(newkey, index);
+    static_cast<BPlusTreeLeafPage *>(cont)->ModValAt(newkey, index);
     pos.Dirty();
   }
   // Return the value associated with a given key
@@ -855,16 +857,16 @@ public:
     return result.empty() ? 0 : result[0];
   }
   void GetUniqueValue(const GetType &key, ValueType &val) {
-    Ptr l = FindPos(KeyType{key, val});
+    Ptr l = FindPos(KeyType{key, val.id});
     BPlusTreeLeafPage *tmp;
     if (l.content)
       tmp = static_cast<BPlusTreeLeafPage *>(l.content);
     else
       return val.id = -1, void();
     for (int i = 0; i < tmp->GetSize(); ++i) {
-      if (key < tmp->array_[i].first.first)
+      if (key < tmp->KeyAt(i).first)
         break;
-      if (tmp->array_[i].first.first == key && tmp->array_[i].first.second.id == val.id) {
+      if (tmp->KeyAt(i).first == key && tmp->KeyAt(i).second == val.id) {
         val = tmp->ValAt(i);
         return;
       }
@@ -872,7 +874,7 @@ public:
     val.id = -1;
   }
   void GetValue(const GetType &key, sjtu::vector<ValueType> *result) {
-    Ptr l = FindPos(KeyType{key, ValueType()});
+    Ptr l = FindPos(KeyType{key, INT_MIN});
     BPlusTreeLeafPage *tmp;
     while (
         l.content &&
@@ -880,10 +882,10 @@ public:
             key) {
       // assert(id);
       for (int i = 0; i < tmp->GetSize(); ++i)
-        if (tmp->array_[i].first.first == key) {
-          result->push_back(tmp->array_[i].first.second);
+        if (tmp->KeyAt(i).first == key) {
+          result->push_back(tmp->ValAt(i));
         }
-        else if(key < tmp->array_[i].first.first)return;
+        else if(key < tmp->KeyAt(i).first)return;
       l = Ptr(&bpm, nullptr,
                   static_cast<BPlusTreeLeafPage *>(l.content)->next_page_id_);
     }

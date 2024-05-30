@@ -161,7 +161,7 @@ void TrainManager::release_train(std::stringstream &in) {
   for (int i = 0; i < old.stationNum - 1; ++i) {
     //  std::cout << "Insert " << old.stations[i] << " " << info.stid << " " <<
     //  info.price << " " << info.id << " " << info.starttime << '\n';
-    seat.Insert(pair<unsigned int, TrainInfo>(old.stations[i].hsh(), info), info);
+    seat.Insert(pair<unsigned int, int>(old.stations[i].hsh(), id), info);
     info.price = old.prices[i];
     if (!i)
       info.stoptime = 0;
@@ -174,7 +174,7 @@ void TrainManager::release_train(std::stringstream &in) {
   
   info.starttime = -1;
   info.price = old.prices[old.stationNum - 2];
-  seat.Insert(pair<unsigned int, TrainInfo>(old.stations[old.stationNum - 1].hsh(), info),
+  seat.Insert(pair<unsigned int, int>(old.stations[old.stationNum - 1].hsh(), info.id),
               info);
   std::cout << "0\n";
 }
