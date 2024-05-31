@@ -41,11 +41,11 @@ struct Train{
   Train() = default;
   TrainT trainID;
   int stationNum, seatNum;
-  StationT stations[21];
-  int prices[21];
+  StationT stations[100];
+  int prices[100];
   short startTime;
-  short travelTimes[21];
-  short stopoverTimes[21];
+  short travelTimes[100];
+  short stopoverTimes[100];
   short saleDate[2];
   char type;
   void Init(std::stringstream& in);
@@ -65,7 +65,7 @@ struct Train{
 };
 
 struct Reinfo{
-  int seat[21]; 
+  int seat[100]; 
   int num, stop;
   Reinfo(int num_ = 0, int stop_ = 0) {
     num = num_, stop = stop_;
