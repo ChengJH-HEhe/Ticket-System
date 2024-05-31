@@ -11,9 +11,6 @@ std::string privates[] = {"buy_ticket", "query_order", "refund_ticket", "clean",
 // the last functions
 // logfile sucfile:indx, pndfile:indx
 // traverse all pending file
-
-
-
 void mainsystem::buy_ticket(std::stringstream &in) {
   // login
   UserNameT uname;
@@ -148,9 +145,9 @@ void mainsystem::exit() {
   std::cout << "bye\n";
   userSystem.um.loginUser.exit(1);
 }
-static Timer query_transfer_timer("query_transfer"),
-query_ticket_timer("query ticket"),
-find_seat("query_ticket");
+// static Timer query_transfer_timer("query_transfer"),
+// query_ticket_timer("query ticket"),
+// find_seat("query_ticket");
 
 bool mainsystem::init(std::stringstream &in) {
   std::string tim;
@@ -199,9 +196,9 @@ bool mainsystem::init(std::stringstream &in) {
       }
         break;
       case 4:{
-        query_ticket_timer.start();
+        //query_ticket_timer.start();
         trainSystem.query_ticket(in);
-        query_ticket_timer.stop();
+        //query_ticket_timer.stop();
       }
         break;
       case 5:{

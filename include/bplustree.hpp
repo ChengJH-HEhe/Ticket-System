@@ -30,7 +30,7 @@ namespace Bptree {
 #define LEAF_PAGE_HEADER_SIZE 24
 
 #define INDEX_TEMPLATE_ARGUMENTS                                               \
-  template <typename KeyType, typename ValueType, typename GetType, int bpmSize = 985>
+  template <typename KeyType, typename ValueType, typename GetType, int bpmSize = 100>
 
 // define page type enum
 enum class IndexPageType { INVALID_INDEX_PAGE = 0, LEAF_PAGE, INTERNAL_PAGE };
@@ -341,16 +341,16 @@ class BPlusTree {
       }
     }
     void remove() {
-      for(int i = 0;i < sz; ++i)
-        if(pos[i]) {
-          //std::cerr << "del " << pos[i] << " " << tmp[i].head << std::endl;
-          delete tmp[i].head;
-          if (tmp[i].content->IsLeafPage())
-            delete static_cast<BPlusTreeLeafPage *>(tmp[i].content);
-          else
-            delete static_cast<BPlusTreeInternalPage *>(tmp[i].content);
-          tmp[i].head = nullptr;
-        }
+      // for(int i = 0;i < sz; ++i)
+      //   if(pos[i]) {
+      //     //std::cerr << "del " << pos[i] << " " << tmp[i].head << std::endl;
+      //     delete tmp[i].head;
+      //     if (tmp[i].content->IsLeafPage())
+      //       delete static_cast<BPlusTreeLeafPage *>(tmp[i].content);
+      //     else
+      //       delete static_cast<BPlusTreeInternalPage *>(tmp[i].content);
+      //     tmp[i].head = nullptr;
+      //   }
       root.close();
       std::remove(root_name.c_str());
       disk.remove();
@@ -861,9 +861,9 @@ public:
   }
   // Return the value associated with a given key
   int find(const GetType &key) {
-    sjtu::vector<int> result;
-    GetValue(key, &result);
-    return result.empty() ? 0 : result[0];
+    sjtu::vector<int> res;
+    GetValue(key, &res);
+    return res.size()?res[0]:0;
   }
   void GetUniqueValue(const GetType &key, ValueType &val) {
     Ptr l = FindPos(KeyType{key, val.id});

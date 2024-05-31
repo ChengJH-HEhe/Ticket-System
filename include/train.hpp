@@ -9,24 +9,25 @@
 // query_ticket
 // one stop form stoptime -> starttime id -> trainid
 // travel form: starttime -> stoptime id -> release_id
+extern TrainM basic;
+
 struct TrainInfo{
   TrainInfo() = default;
-  TrainT name;
   short stid, edid; // station id
+  short saleDate0, saleDate1;// 
   int price; // delta price since start
   int stoptime, starttime; // delta time since start -1 invalid
   int id; // trainid 
-  short saleDate0, saleDate1;// 
+  
   // start date
-  clck st;// start time
-  TrainInfo(TrainT name_, short saledate_0, short saledate_1, clck st_, 
+  clck st;
+  TrainInfo(short saledate_0, short saledate_1, clck st_, 
   short stid_ = 0, short edid_ = 0, 
   int price_ = 0, 
   int stoptime_ = 0, int starttime_ = 0, 
   int id_ = 0) :
-   st(st_), name(name_),
   price(price_), saleDate0(saledate_0),saleDate1(saledate_1), 
-  stoptime(stoptime_), starttime(starttime_), id(id_),
+  stoptime(stoptime_), st(st_), starttime(starttime_), id(id_),
   stid(stid_), edid(edid_) {};
   bool operator < (const TrainInfo& rhs) const {
     return id < rhs.id;
@@ -81,7 +82,7 @@ struct TrainManager {
   Bptree::BPlusTree<pair<unsigned int,int>, int, unsigned int> TrainID;
   Bptree::BPlusTree<pair<int,int>, int, int> release;
   // from stations to the id price time
-  Bptree::BPlusTree<pair<unsigned int, int>, TrainInfo, unsigned int, 1096> seat;
+  Bptree::BPlusTree<pair<unsigned int, int>, TrainInfo, unsigned int, 1100> seat;
   // steal? find second -intmax min
   FileManager<Train> TrainFile;
   FileManager<Reinfo> ReFile;
@@ -91,7 +92,6 @@ struct TrainManager {
     seat.Init(file_name + "_seat");
     TrainID.Init(file_name + "_id");
     release.Init(file_name + "_release");
-    // train_timer.name = file_name.c_str();
   }
   void remove() {
     TrainFile.remove();
@@ -101,7 +101,7 @@ struct TrainManager {
   }
   TrainInfo get_one_TrainInfo(const StationT& name, const int& id);
   void add_train(std::stringstream& in);
-  void print(const TrainInfo&, clck, const short&, const StationT&, const StationT&);
+  void print(const TrainInfo&, clck, const short&, const StationT&, const StationT&, const int&);
   int find_train(const unsigned int&);
   int find_release(const int& id);
   int get_seat(int index, int st, int ed);

@@ -2,7 +2,6 @@
 
 TrainInfo trainsystem::get_TrainInfo(const StationT& str, const int& id) {
   // 双关键？price排序 
-  // 
   return TM.get_one_TrainInfo(str, id);
 }
 

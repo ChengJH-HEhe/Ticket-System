@@ -1,6 +1,5 @@
 #include "user.hpp"
 #include "config.h"
-#include "vector.hpp"
 #include <string>
 
 std::string User::profile() {
@@ -8,12 +7,12 @@ std::string User::profile() {
 }
 
 int UserManager::find_user(const UserNameT& cur_username, int type = 0) {
-  sjtu::vector<int> result;
+  sjtu::vector<int> res;
   if(!type)
-    user.GetValue(cur_username.hsh(), &result);
+    user.GetValue(cur_username.hsh(), &res); // user.GetOneValue(cur_username.hsh(), res1);
   else 
-    loginUser.GetValue(cur_username.hsh(), &result);
-  return result.empty() ? 0 : result[0];
+    loginUser.GetValue(cur_username.hsh(), &res); // loginUser.GetOneValue(cur_username.hsh(), res1);
+  return res.empty()? 0 : res[0];
 }
 void UserManager::get_user(User& olduser, int UserID) {
   UserFile.get_content(olduser, UserID);
@@ -24,7 +23,7 @@ void UserManager::modify_user(User& olduser, int UserID) {
 
 int UserManager::direct_find_user(const UserNameT& cur_username, User& OldUser, bool old) {
   int olduserID = find_user(cur_username,old);
-  if(olduserID <= 0) return 0;
+  if(!olduserID) return 0;
   get_user(OldUser, olduserID);
   return olduserID;
 }
