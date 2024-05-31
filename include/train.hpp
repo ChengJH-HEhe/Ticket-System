@@ -15,12 +15,11 @@ struct TrainInfo{
   TrainInfo() = default;
   short stid, edid; // station id
   short saleDate0, saleDate1;// 
-  int price; // delta price since start
-  int stoptime, starttime; // delta time since start -1 invalid
-  int id; // trainid 
-  
-  // start date
   clck st;
+  int price; 
+  int stoptime, starttime; 
+  int id; // trainid 
+  // start date
   TrainInfo(short saledate_0, short saledate_1, clck st_, 
   short stid_ = 0, short edid_ = 0, 
   int price_ = 0, 
