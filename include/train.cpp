@@ -610,7 +610,7 @@ void TrainManager::query_transfer(std::stringstream &in) {
     }
   };
 
-  if (ed.size() < 500) {
+  if (ed.size() < 1000) {
     Train *trt = new Train[ed.size()];
     for (int i = 0; i < ed.size(); ++i)
       TrainFile.get_content(trt[i], ed[i].id);

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.0.0)
 project(Ticket_system VERSION 0.1.0 LANGUAGES C CXX)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20 -O3 -Ofast")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20 -O2 -O3 -Ofast")
 include(CTest)
 include_directories(${CMAKE_SOURCE_DIR}/include)
 enable_testing()

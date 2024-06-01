@@ -168,7 +168,7 @@ struct TrainM{
 #define maxM 10001
   std::fstream Train_io_; 
   TrainT info[maxM];
-  int cnt = 0;
+  int cnt = 0, las = 0;
   TrainM() { 
     Train_io_.open("basic_train.inf", std::ios::binary | std::ios::in | std::ios::out);
     if (!Train_io_.good()) {
@@ -180,6 +180,7 @@ struct TrainM{
       //std::cerr << "initialsed" << '\n';
       Train_io_.seekg(0);
       Train_io_.read(reinterpret_cast<char *>(&cnt), sizeof(int));
+      las = cnt;
       Train_io_.read(reinterpret_cast<char *>(info), (cnt+1)*sizeof(TrainT));
       // std::cerr << cnt << std::endl;
       // for(int i = 0; i < cnt; ++i)
@@ -191,9 +192,12 @@ struct TrainM{
     info[++cnt] = rhs;
   }
   ~TrainM() {
-    Train_io_.seekp(0);
-    Train_io_.write(reinterpret_cast<const char*>(&cnt), sizeof(int));
-    Train_io_.write(reinterpret_cast<const char*>(info), (cnt+1)*sizeof(TrainT));
+    if(cnt > las) {
+      Train_io_.seekp(0);
+      Train_io_.write(reinterpret_cast<const char*>(&cnt), sizeof(int));
+      Train_io_.seekp(4 + (las+1)*sizeof(TrainT));
+      Train_io_.write(reinterpret_cast<const char*>(info+las+1), (cnt-las)*sizeof(TrainT));
+    }
     Train_io_.close();
   }
 #undef maxM 
